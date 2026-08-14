@@ -10,17 +10,17 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from backend.app.analytics.correlation import (
+from app.analytics.correlation import (
     compute_fatigue_pace_correlation,
     compute_stint_fatigue_trend,
     compute_stress_pace_correlation,
 )
-from backend.app.analytics.insights import generate_insights
-from backend.app.analytics.lap_alignment import build_aligned_laps
-from backend.app.audio.features import analyze_acoustics
-from backend.app.audio.preprocessing import preprocess_audio, save_processed_audio
-from backend.app.core.config import settings
-from backend.app.schemas.schemas import (
+from app.analytics.insights import generate_insights
+from app.analytics.lap_alignment import build_aligned_laps
+from app.audio.features import analyze_acoustics
+from app.audio.preprocessing import preprocess_audio, save_processed_audio
+from app.core.config import settings
+from app.schemas.schemas import (
     AcousticAnalysis,
     AnalysisResponse,
     AnalysisSummary,
@@ -28,9 +28,9 @@ from backend.app.schemas.schemas import (
     DriverState,
     EmotionLabel,
 )
-from backend.app.services.driver_state_service import fuse_driver_states
-from backend.app.services.emotion_service import analyze_preprocessed_emotions
-from backend.app.services.transcription_service import transcribe_preprocessed
+from app.services.driver_state_service import fuse_driver_states
+from app.services.emotion_service import analyze_preprocessed_emotions
+from app.services.transcription_service import transcribe_preprocessed
 
 logger = logging.getLogger(__name__)
 

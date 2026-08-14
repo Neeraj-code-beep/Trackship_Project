@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 
-from backend.app.schemas.schemas import (
+from app.schemas.schemas import (
     AcousticAnalysis,
     AcousticFeatures,
     DriverState,
@@ -11,7 +11,7 @@ from backend.app.schemas.schemas import (
     SegmentAcousticFeatures,
     TranscriptSegment,
 )
-from backend.app.services.driver_state_service import fuse_driver_states
+from app.services.driver_state_service import fuse_driver_states
 
 
 def _emotion(

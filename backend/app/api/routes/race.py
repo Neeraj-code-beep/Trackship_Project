@@ -4,21 +4,21 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from backend.app.analytics.lap_performance import compute_lap_baseline
-from backend.app.api.routes import _stores
-from backend.app.core.config import settings
-from backend.app.core.errors import RaceNotFoundError
-from backend.app.schemas.schemas import (
+from app.analytics.lap_performance import compute_lap_baseline
+from app.api.routes import _stores
+from app.core.config import settings
+from app.core.errors import RaceNotFoundError
+from app.schemas.schemas import (
     ErrorResponse,
     LapIngestionRequest,
     LapIngestionResponse,
     RaceOverview,
 )
-from backend.app.services.lap_service import (
+from app.services.lap_service import (
     LapDataValidationError,
     parse_lap_csv,
 )
-from backend.app.services.lap_service import (
+from app.services.lap_service import (
     ingest_laps as ingest_laps_service,
 )
 from fastapi import APIRouter, File, Form, UploadFile

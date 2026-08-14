@@ -6,8 +6,8 @@ import uuid
 from datetime import datetime, timezone
 
 import pytest
-from backend.app.core.config import settings
-from backend.app.schemas.schemas import (
+from app.core.config import settings
+from app.schemas.schemas import (
     DriverState,
     EmotionLabel,
     EmotionProbabilities,
@@ -15,9 +15,9 @@ from backend.app.schemas.schemas import (
     TranscriptionResult,
     TranscriptSegment,
 )
-from backend.app.services import analysis_service
-from backend.app.services.analysis_service import AnalysisPipelineError, run_full_analysis
-from backend.app.services.lap_service import normalize_laps
+from app.services import analysis_service
+from app.services.analysis_service import AnalysisPipelineError, run_full_analysis
+from app.services.lap_service import normalize_laps
 
 
 def _transcription(file_id):

@@ -9,16 +9,16 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Any
 
-from backend.app.api.routes.analysis import router as analysis_router
-from backend.app.api.routes.audio import router as audio_router
-from backend.app.api.routes.race import router as race_router
-from backend.app.audio.validation import AudioValidationError
-from backend.app.core.config import settings
-from backend.app.core.errors import AppError
-from backend.app.services.analysis_service import AnalysisPipelineError
-from backend.app.services.emotion_service import EmotionAnalysisError
-from backend.app.services.lap_service import LapDataValidationError
-from backend.app.services.transcription_service import TranscriptionError
+from app.api.routes.analysis import router as analysis_router
+from app.api.routes.audio import router as audio_router
+from app.api.routes.race import router as race_router
+from app.audio.validation import AudioValidationError
+from app.core.config import settings
+from app.core.errors import AppError
+from app.services.analysis_service import AnalysisPipelineError
+from app.services.emotion_service import EmotionAnalysisError
+from app.services.lap_service import LapDataValidationError
+from app.services.transcription_service import TranscriptionError
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -155,7 +155,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 @app.get("/health", tags=["System"], include_in_schema=False)
 async def health_check():
     """Fast health/status response that never loads an AI model."""
-    from backend.app.services.model_registry import registry
+    from app.services.model_registry import registry
 
     return {
         "status": "ok",

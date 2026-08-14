@@ -37,10 +37,11 @@ the first analysis request that needs them; API startup and health checks do not
 
 ## Run
 
-From the repository root:
+From the backend directory:
 
 ```powershell
-python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+cd backend
+uvicorn app.main:app --reload
 ```
 
 Open [Swagger](http://127.0.0.1:8000/docs) or call

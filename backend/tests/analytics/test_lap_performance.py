@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from backend.app.analytics.lap_alignment import build_aligned_laps
-from backend.app.analytics.lap_performance import compute_lap_baseline, lap_delta
-from backend.app.schemas.schemas import LapData
-from backend.app.services.lap_service import normalize_laps
+from app.analytics.lap_alignment import build_aligned_laps
+from app.analytics.lap_performance import compute_lap_baseline, lap_delta
+from app.schemas.schemas import LapData
+from app.services.lap_service import normalize_laps
 
 
 def _laps(times):

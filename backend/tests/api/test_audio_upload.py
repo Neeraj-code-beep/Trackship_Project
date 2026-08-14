@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from backend.app.core.config import settings
-from backend.app.main import app
+from app.core.config import settings
+from app.main import app
 from fastapi.testclient import TestClient
 
 

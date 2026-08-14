@@ -8,7 +8,7 @@ import math
 from datetime import datetime, timezone
 from typing import Any
 
-from backend.app.schemas.schemas import LapData, LapIngestionResponse
+from app.schemas.schemas import LapData, LapIngestionResponse
 
 REQUIRED_CSV_COLUMNS = frozenset({"lap", "lap_time", "start_time"})
 TIMING_TOLERANCE_SECONDS = 0.01

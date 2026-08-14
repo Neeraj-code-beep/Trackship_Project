@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from backend.app.analytics.lap_alignment import (
+from app.analytics.lap_alignment import (
     align_emotions_to_laps,
     align_segments_to_laps,
     build_aligned_laps,
     timestamp_to_lap,
 )
-from backend.app.schemas.schemas import (
+from app.schemas.schemas import (
     DriverState,
     EmotionLabel,
     EmotionProbabilities,
     LapData,
     TranscriptSegment,
 )
-from backend.app.services.lap_service import normalize_laps
+from app.services.lap_service import normalize_laps
 
 
 def _laps():
