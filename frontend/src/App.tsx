@@ -1,12 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import LandingPage from './pages/LandingPage/LandingPage';
 import Dashboard from './pages/Dashboard/Dashboard';
-import { Gauge, Radio, Flag, ChevronRight, ShieldCheck } from 'lucide-react';
+import { Gauge, Radio, Flag, ChevronRight } from 'lucide-react';
 import Button from './components/ui/Button';
+import SignalIndicator from './components/ui/SignalIndicator';
+import { healthCheck } from './services/api';
 import './index.css';
 
 function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'console'>('landing');
+  const [healthStatus, setHealthStatus] = useState<'CHECKING' | 'CONNECTED' | 'OFFLINE'>('CHECKING');
+
+  useEffect(() => {
+    let active = true;
+    async function checkHealth() {
+      try {
+        const res = await healthCheck();
+        if (active) {
+          if (res && (res.status === 'healthy' || res.status === 'ok')) {
+            setHealthStatus('CONNECTED');
+          } else {
+            setHealthStatus('OFFLINE');
+          }
+        }
+      } catch {
+        if (active) setHealthStatus('OFFLINE');
+      }
+    }
+    checkHealth();
+    const interval = setInterval(checkHealth, 15000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
     <div className="sc-app-wrapper">
@@ -59,10 +86,10 @@ function App() {
           </div>
 
           <div className="sc-app-nav__status">
-            <ShieldCheck size={13} className="text-lime" />
-            <span className="text-micro font-telemetry" style={{ color: 'var(--color-text-secondary)' }}>
-              LIVE RACE ENGINE v2.5
-            </span>
+            <SignalIndicator
+              status={healthStatus === 'CONNECTED' ? 'active' : healthStatus === 'CHECKING' ? 'processing' : 'idle'}
+              label={healthStatus === 'CONNECTED' ? 'ENGINE CONNECTED' : healthStatus === 'CHECKING' ? 'CHECKING ENGINE' : 'ENGINE OFFLINE'}
+            />
           </div>
 
           <Button

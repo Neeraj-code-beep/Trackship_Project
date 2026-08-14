@@ -3,11 +3,12 @@ import { motion } from 'framer-motion';
 import { Activity, Heart, Minus, Moon, Zap, ShieldCheck } from 'lucide-react';
 import type { EmotionProbabilities, EmotionLabel } from '../../types';
 import ProgressBar from '../../components/ui/ProgressBar';
+import { EmptyState } from '../../components/ui/State';
 import './DriverState.css';
 
 interface DriverStateCardProps {
-  overallStress: number;
-  overallFatigue: number;
+  overallStress: number | null;
+  overallFatigue: number | null;
   dominantEmotion?: EmotionLabel;
   probabilities?: EmotionProbabilities;
   processingTime?: number;
@@ -47,6 +48,29 @@ export const DriverStateCard: React.FC<DriverStateCardProps> = ({
   probabilities,
   processingTime,
 }) => {
+  if (overallStress === null || overallFatigue === null || !probabilities) {
+    return (
+      <div className="sc-driver-card">
+        <div className="sc-driver-card__header">
+          <div className="sc-driver-card__title-group">
+            <div className="sc-driver-card__header-icon" style={{ color: 'var(--color-brand-lime)' }}>
+              <Activity size={16} />
+            </div>
+            <div>
+              <h3 className="text-h4 font-display" style={{ margin: 0 }}>Driver State Spectrum</h3>
+              <span className="text-micro font-telemetry">ACOUSTIC & PHYSIOLOGICAL EMOTION MODEL</span>
+            </div>
+          </div>
+        </div>
+        <EmptyState
+          icon={<Activity size={32} />}
+          title="Awaiting Driver Telemetry"
+          description="Driver stress and fatigue levels will be analyzed and plotted here upon audio session ingestion."
+        />
+      </div>
+    );
+  }
+
   const config = emotionConfig[dominantEmotion] || emotionConfig.neutral;
 
   const calmVal = (probabilities?.calm ?? 0) * 100;

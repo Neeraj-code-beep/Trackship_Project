@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     AI_DEVICE: str = "auto"
     ENABLE_AI_MOCKS: bool = False
     HF_TOKEN: SecretStr | None = None
+    CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",

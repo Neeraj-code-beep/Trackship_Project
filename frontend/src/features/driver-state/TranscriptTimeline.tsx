@@ -17,7 +17,7 @@ function formatTime(seconds: number): string {
 }
 
 export const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({
-  segments,
+  segments = [],
   currentTime,
   onSegmentClick,
 }) => {
@@ -50,7 +50,7 @@ export const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({
         });
       }
     }
-  }, [activeIdx]);
+  }, [activeIdx, segments.length]);
 
   if (!segments.length) {
     return (
@@ -120,13 +120,13 @@ export const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({
 
               <div className="sc-transcript-item__body">
                 <div className="sc-transcript-item__meta">
-                  <span className={`sc-transcript-item__speaker font-telemetry ${seg.speaker?.toLowerCase().includes('engineer') ? 'sc-transcript-item__speaker--engineer' : ''}`}>
+                  <span className={`sc-transcript-item__speaker font-telemetry ${(seg.speaker || '').toLowerCase().includes('engineer') ? 'sc-transcript-item__speaker--engineer' : ''}`}>
                     {seg.speaker || 'DRIVER 01'}
                   </span>
 
                   <span className="sc-transcript-item__conf font-telemetry text-micro">
                     <ShieldCheck size={11} />
-                    {(seg.confidence * 100).toFixed(0)}% ASR
+                    {((seg.confidence ?? 1.0) * 100).toFixed(0)}% ASR
                   </span>
 
                   {isStressFlagged && (

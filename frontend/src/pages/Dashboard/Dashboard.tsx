@@ -14,7 +14,7 @@ import TranscriptTimeline from '../../features/driver-state/TranscriptTimeline';
 import RaceInsightsFeed from '../../features/race-insights/RaceInsightsFeed';
 import SignalIndicator from '../../components/ui/SignalIndicator';
 import AnimatedNumber from '../../components/ui/AnimatedNumber';
-import { runAnalysis, ingestLaps } from '../../services/api';
+import { runAnalysis, ingestLaps, normalizeError } from '../../services/api';
 import type {
   AudioUploadResponse, AnalysisResponse, AlignedLapEmotion,
   EmotionLabel
@@ -57,6 +57,7 @@ export const Dashboard: React.FC = () => {
   const handleUploadComplete = useCallback(async (response: AudioUploadResponse) => {
     setIsAnalyzing(true);
     setError(null);
+    setAnalysis(null);
 
     try {
       // Ingest demo lap telemetry
@@ -74,7 +75,7 @@ export const Dashboard: React.FC = () => {
 
       setAnalysis(result);
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Analysis failed');
+      setError(normalizeError(err));
     } finally {
       setIsAnalyzing(false);
     }
@@ -101,7 +102,7 @@ export const Dashboard: React.FC = () => {
     : 89.876;
 
   // Determine dominant overall emotion
-  const dominantEmotion: EmotionLabel = analysis?.driver_states?.length
+  const dominantEmotion: EmotionLabel | undefined = analysis?.driver_states?.length
     ? ((): EmotionLabel => {
         const counts: Record<string, number> = {};
         analysis.driver_states.forEach(s => {
@@ -109,7 +110,7 @@ export const Dashboard: React.FC = () => {
         });
         return (Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] as EmotionLabel) || 'neutral';
       })()
-    : 'stressed';
+    : undefined;
 
   const avgProbs = analysis?.driver_states?.length
     ? {
@@ -118,7 +119,7 @@ export const Dashboard: React.FC = () => {
         neutral: analysis.driver_states.reduce((s, d) => s + d.probabilities.neutral, 0) / analysis.driver_states.length,
         tired: analysis.driver_states.reduce((s, d) => s + d.probabilities.tired, 0) / analysis.driver_states.length,
       }
-    : { calm: 0.16, stressed: 0.68, neutral: 0.12, tired: 0.24 };
+    : undefined;
 
   return (
     <div className="sc-console">
@@ -172,20 +173,28 @@ export const Dashboard: React.FC = () => {
           <div className="sc-hero-metric">
             <span className="text-label">Driver Stress</span>
             <span className="sc-hero-metric__val font-telemetry" style={{ color: 'var(--color-driver-stressed)' }}>
-              <AnimatedNumber value={analysis ? analysis.overall_stress * 100 : 68} decimals={0} suffix="%" />
+              {analysis && analysis.driver_states?.length > 0 ? (
+                <AnimatedNumber value={analysis.overall_stress * 100} decimals={0} suffix="%" />
+              ) : (
+                '--'
+              )}
             </span>
             <span className="sc-hero-metric__delta font-telemetry" style={{ color: 'var(--color-driver-stressed)' }}>
-              +12% TURN 7 ENTRY
+              {analysis && analysis.driver_states?.length > 0 ? '+12% TURN 7 ENTRY' : '--'}
             </span>
           </div>
 
           <div className="sc-hero-metric">
             <span className="text-label">Fatigue Index</span>
             <span className="sc-hero-metric__val font-telemetry" style={{ color: 'var(--color-driver-fatigue)' }}>
-              <AnimatedNumber value={analysis ? analysis.overall_fatigue * 100 : 24} decimals={0} suffix="%" />
+              {analysis && analysis.driver_states?.length > 0 ? (
+                <AnimatedNumber value={analysis.overall_fatigue * 100} decimals={0} suffix="%" />
+              ) : (
+                '--'
+              )}
             </span>
             <span className="sc-hero-metric__delta font-telemetry" style={{ color: 'var(--color-text-muted)' }}>
-              NOMINAL STINT
+              {analysis && analysis.driver_states?.length > 0 ? 'NOMINAL STINT' : '--'}
             </span>
           </div>
 
@@ -318,7 +327,7 @@ export const Dashboard: React.FC = () => {
           {/* Transcript Timeline */}
           <section className="sc-console__section">
             <TranscriptTimeline
-              segments={analysis?.transcription?.segments || [
+              segments={analysis ? (analysis.transcription?.segments || []) : [
                 { start_time: 14.32, end_time: 18.5, text: "Rear is sliding through Turn 7 entry, losing momentum.", confidence: 0.95, speaker: "DRIVER 01" },
                 { start_time: 28.71, end_time: 32.1, text: "Need more front wing angle for sector 2.", confidence: 0.92, speaker: "DRIVER 01" },
                 { start_time: 42.05, end_time: 46.8, text: "Pace is good, tyres holding up fine.", confidence: 0.96, speaker: "DRIVER 01" },
@@ -334,17 +343,17 @@ export const Dashboard: React.FC = () => {
           {/* Driver State Spectrum Card */}
           <section className="sc-console__section" id="driver-state">
             <DriverStateCard
-              overallStress={analysis?.overall_stress ?? 0.68}
-              overallFatigue={analysis?.overall_fatigue ?? 0.24}
+              overallStress={analysis && analysis.driver_states?.length > 0 ? analysis.overall_stress : null}
+              overallFatigue={analysis && analysis.driver_states?.length > 0 ? analysis.overall_fatigue : null}
               dominantEmotion={dominantEmotion}
               probabilities={avgProbs}
-              processingTime={analysis?.processing_time_ms ?? 142}
+              processingTime={analysis?.processing_time_ms}
             />
           </section>
 
           {/* AI Race Engineer Insights Feed */}
           <section className="sc-console__section" id="ai-intelligence">
-            <RaceInsightsFeed insights={analysis?.insights ?? [
+            <RaceInsightsFeed insights={analysis ? (analysis.insights || []) : [
               {
                 id: 'ins-01',
                 severity: 'critical',

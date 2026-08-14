@@ -85,4 +85,66 @@ export async function healthCheck(): Promise<Record<string, unknown>> {
   return response.data;
 }
 
+export function normalizeError(err: unknown): string {
+  if (!err) return 'An unknown error occurred.';
+
+  if (axios.isAxiosError(err)) {
+    if (!err.response) {
+      return 'Unable to connect to the backend.';
+    }
+
+    const status = err.response.status;
+    const data = err.response.data as any;
+
+    if (status === 422) {
+      if (data && data.error && Array.isArray(data.error.details)) {
+        try {
+          const messages = data.error.details.map((d: any) => {
+            const field = Array.isArray(d.location) ? d.location.slice(1).join('.') : '';
+            return field ? `${field}: ${d.message}` : d.message;
+          });
+          return `Validation failed: ${messages.join(', ')}`;
+        } catch {
+          return 'Some submitted data is invalid.';
+        }
+      }
+      if (data && Array.isArray(data.detail)) {
+        try {
+          const messages = data.detail.map((d: any) => {
+            const field = Array.isArray(d.loc) ? d.loc.slice(1).join('.') : '';
+            return field ? `${field}: ${d.msg}` : d.msg;
+          });
+          return `Validation failed: ${messages.join(', ')}`;
+        } catch {
+          return 'Some submitted data is invalid.';
+        }
+      }
+      return 'Some submitted data is invalid.';
+    }
+
+    if (status === 400) {
+      return data && typeof data.detail === 'string' ? data.detail : 'Invalid request.';
+    }
+    if (status === 404) {
+      return data && typeof data.detail === 'string' ? data.detail : 'Resource not found.';
+    }
+    if (status === 413) {
+      return 'Audio file is too large.';
+    }
+    if (status === 500) {
+      return 'Server error. Please try again.';
+    }
+    if (status === 503) {
+      return 'Required AI model service is currently unavailable.';
+    }
+
+    if (data && typeof data.detail === 'string') {
+      return data.detail;
+    }
+  }
+
+  const errorObj = err as Error;
+  return errorObj.message || 'An unexpected error occurred.';
+}
+
 export default apiClient;

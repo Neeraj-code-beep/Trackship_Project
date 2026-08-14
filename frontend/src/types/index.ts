@@ -46,7 +46,7 @@ export interface TranscriptSegment {
   start_time: number;
   end_time: number;
   text: string;
-  confidence: number;
+  confidence: number | null;
   speaker: string | null;
 }
 
@@ -54,8 +54,9 @@ export interface TranscriptionResult {
   file_id: string;
   full_text: string;
   segments: TranscriptSegment[];
-  language: string;
+  language: string | null;
   duration_seconds: number;
+  detected_speech: boolean;
 }
 
 // ─── Lap / Race ──────────────────────────────────────────────────────────────

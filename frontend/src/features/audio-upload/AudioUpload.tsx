@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileAudio, AlertCircle, Loader2, Radio, Play, Pause, Volume2, ShieldCheck, RefreshCw } from 'lucide-react';
-import { uploadAudio } from '../../services/api';
+import { uploadAudio, normalizeError } from '../../services/api';
 import type { AudioUploadResponse, UploadProgress } from '../../types';
 import Waveform from '../../components/ui/Waveform';
 import SignalIndicator from '../../components/ui/SignalIndicator';
@@ -91,7 +91,7 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
       });
       onUploadComplete(response);
     } catch (err: any) {
-      const msg = err.response?.data?.detail || err.message || 'Audio upload failed';
+      const msg = normalizeError(err);
       setProgress({ status: 'error', progress: 0, message: msg });
     }
   }, [onUploadComplete, onFileSelect]);
