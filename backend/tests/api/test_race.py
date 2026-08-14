@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from backend.app.api.routes import _stores
-from backend.app.main import app
+from app.api.routes import _stores
+from app.main import app
 from fastapi.testclient import TestClient
 
 

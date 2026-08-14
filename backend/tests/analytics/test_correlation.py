@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import math
 
-from backend.app.analytics.correlation import (
+from app.analytics.correlation import (
     compute_fatigue_pace_correlation,
     compute_stint_fatigue_trend,
     compute_stress_pace_correlation,
 )
-from backend.app.schemas.schemas import AlignedLapEmotion, EmotionLabel
+from app.schemas.schemas import AlignedLapEmotion, EmotionLabel
 
 
 def _lap(

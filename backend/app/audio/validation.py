@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from backend.app.audio.decoder import AudioDecodeError, inspect_audio
-from backend.app.core.config import settings
+from app.audio.decoder import AudioDecodeError, inspect_audio
+from app.core.config import settings
 from fastapi import UploadFile
 
 

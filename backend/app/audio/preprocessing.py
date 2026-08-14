@@ -10,9 +10,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
-from backend.app.audio.decoder import decode_audio
-from backend.app.audio.validation import validate_extension
-from backend.app.core.config import settings
+from app.audio.decoder import decode_audio
+from app.audio.validation import validate_extension
+from app.core.config import settings
 from scipy.signal import resample_poly
 
 MODEL_SAMPLE_RATE = 16_000

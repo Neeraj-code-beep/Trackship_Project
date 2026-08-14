@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pytest
-from backend.app.schemas.schemas import LapData
-from backend.app.services.lap_service import (
+from app.schemas.schemas import LapData
+from app.services.lap_service import (
     LapDataValidationError,
     ingest_laps,
     normalize_laps,

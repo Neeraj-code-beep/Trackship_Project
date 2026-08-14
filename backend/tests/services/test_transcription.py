@@ -5,9 +5,9 @@ import math
 
 import numpy as np
 import pytest
-from backend.app.audio.preprocessing import preprocess_audio
-from backend.app.services.model_registry import ModelUnavailableError, registry
-from backend.app.services.transcription_service import TranscriptionError, transcribe_audio
+from app.audio.preprocessing import preprocess_audio
+from app.services.model_registry import ModelUnavailableError, registry
+from app.services.transcription_service import TranscriptionError, transcribe_audio
 
 
 class FakeWhisperModel:

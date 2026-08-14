@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from backend.app.analytics.insights import generate_insights
-from backend.app.schemas.schemas import (
+from app.analytics.insights import generate_insights
+from app.schemas.schemas import (
     AlignedLapEmotion,
     EmotionLabel,
     InsightPriority,

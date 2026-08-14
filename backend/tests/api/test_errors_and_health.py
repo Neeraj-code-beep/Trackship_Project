@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import uuid
 
-from backend.app.api.routes import _stores
-from backend.app.api.routes import analysis as analysis_route
-from backend.app.main import app
-from backend.app.services.transcription_service import TranscriptionError
+from app.api.routes import _stores
+from app.api.routes import analysis as analysis_route
+from app.main import app
+from app.services.transcription_service import TranscriptionError
 from fastapi.testclient import TestClient
 
 

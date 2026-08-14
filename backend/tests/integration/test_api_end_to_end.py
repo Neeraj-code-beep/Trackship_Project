@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 import math
 
-from backend.app.api.routes import _stores
-from backend.app.core.config import settings
-from backend.app.main import app
-from backend.app.services.model_registry import registry
+from app.api.routes import _stores
+from app.core.config import settings
+from app.main import app
+from app.services.model_registry import registry
 from fastapi.testclient import TestClient
 
 

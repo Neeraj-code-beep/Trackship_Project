@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import re
 
-from backend.app.schemas.schemas import (
+from app.schemas.schemas import (
     AcousticAnalysis,
     AcousticFeatures,
     DriverState,

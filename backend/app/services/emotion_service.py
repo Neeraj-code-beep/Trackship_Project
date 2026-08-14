@@ -9,15 +9,15 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
-from backend.app.audio.preprocessing import PreprocessedAudio, preprocess_audio
-from backend.app.core.config import settings
-from backend.app.schemas.schemas import (
+from app.audio.preprocessing import PreprocessedAudio, preprocess_audio
+from app.core.config import settings
+from app.schemas.schemas import (
     DriverState,
     EmotionLabel,
     EmotionProbabilities,
     TranscriptSegment,
 )
-from backend.app.services.model_registry import ModelUnavailableError, registry
+from app.services.model_registry import ModelUnavailableError, registry
 
 logger = logging.getLogger(__name__)
 

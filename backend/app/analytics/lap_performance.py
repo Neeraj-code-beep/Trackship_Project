@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from statistics import median
 
-from backend.app.schemas.schemas import LapData, LapPerformanceBaseline
+from app.schemas.schemas import LapData, LapPerformanceBaseline
 
 MODIFIED_Z_THRESHOLD = 3.5
 MAD_SCALE = 0.6745
