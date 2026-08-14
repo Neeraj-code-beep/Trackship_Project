@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: set[str] = {".wav", ".mp3", ".m4a", ".flac"}
 
     ASR_MODEL_NAME: str = "tiny"
+    ASR_LANGUAGE: str | None = None
     EMOTION_MODEL_NAME: str = "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition"
     AI_DEVICE: str = "auto"
     ENABLE_AI_MOCKS: bool = False
