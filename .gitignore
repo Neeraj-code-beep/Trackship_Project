@@ -1,0 +1,23 @@
+# Python bytecode and test/tool caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Python environments and local configuration
+.venv/
+venv/
+backend/.env
+
+# Runtime audio/model artifacts
+backend/data/uploads/*
+backend/data/processed/*
+backend/models/
+models/
+
+# Keep runtime directories present in clean checkouts
+!backend/data/uploads/.gitkeep
+!backend/data/processed/.gitkeep
+

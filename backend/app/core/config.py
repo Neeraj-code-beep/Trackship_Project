@@ -1,32 +1,60 @@
-import os
+"""Application configuration loaded from environment variables."""
+
 from pathlib import Path
-from pydantic_settings import BaseSettings
+
+from pydantic import Field, SecretStr, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Silent Co-Driver"
     API_V1_STR: str = "/api/v1"
-    
-    # Base paths
+    APP_ENV: str = "development"
+    DEBUG: bool = False
+
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
     UPLOAD_DIR: Path = BASE_DIR / "data" / "uploads"
-    
-    # Audio Validation Settings
-    MAX_AUDIO_SIZE_BYTES: int = 50 * 1024 * 1024  # 50 MB
-    ALLOWED_EXTENSIONS: set = {".wav", ".mp3", ".m4a", ".flac"}
-    ALLOWED_MIME_TYPES: set = {
-        "audio/wav", "audio/x-wav", 
-        "audio/mpeg", "audio/mp3", 
-        "audio/m4a", "audio/x-m4a", "audio/mp4",
-        "audio/flac", "audio/x-flac"
-    }
-    MIN_DURATION_SECONDS: float = 0.5
-    MAX_DURATION_SECONDS: float = 600.0  # 10 minutes
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    PROCESSED_DIR: Path = BASE_DIR / "data" / "processed"
+    MODEL_DIR: Path = BASE_DIR / "models"
+
+    MAX_UPLOAD_SIZE_MB: float = 50.0
+    MIN_AUDIO_DURATION_SECONDS: float = 0.5
+    MAX_AUDIO_DURATION_SECONDS: float = 600.0
+    MAX_LAP_CSV_SIZE_MB: float = 2.0
+    ALLOWED_EXTENSIONS: set[str] = {".wav", ".mp3", ".m4a", ".flac"}
+
+    ASR_MODEL_NAME: str = "tiny"
+    ASR_LANGUAGE: str | None = None
+    EMOTION_MODEL_NAME: str = "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition"
+    SER_SEGMENT_SECONDS: float = Field(default=5.0, gt=0.0, le=60.0)
+    AI_DEVICE: str = "auto"
+    ENABLE_AI_MOCKS: bool = False
+    HF_TOKEN: SecretStr | None = None
+
+    model_config = SettingsConfigDict(
+        env_file=BASE_DIR / ".env",
+        case_sensitive=True,
+        extra="ignore",
+    )
+
+    @property
+    def max_upload_size_bytes(self) -> int:
+        """Configured upload limit converted to bytes."""
+        return int(self.MAX_UPLOAD_SIZE_MB * 1024 * 1024)
+
+    @property
+    def max_lap_csv_size_bytes(self) -> int:
+        return int(self.MAX_LAP_CSV_SIZE_MB * 1024 * 1024)
+
+    @model_validator(mode="after")
+    def resolve_runtime_paths(self) -> "Settings":
+        """Anchor relative runtime paths to the backend directory."""
+        base_dir = self.BASE_DIR.resolve()
+        for field_name in ("UPLOAD_DIR", "PROCESSED_DIR", "MODEL_DIR"):
+            value = getattr(self, field_name)
+            if not value.is_absolute():
+                setattr(self, field_name, (base_dir / value).resolve())
+        return self
+
 
 settings = Settings()
-
-# Ensure uploads directory exists
-settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
