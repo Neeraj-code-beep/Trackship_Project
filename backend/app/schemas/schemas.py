@@ -6,7 +6,7 @@ All request/response models are defined here for strict type safety.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -43,7 +43,7 @@ class AudioUploadResponse(BaseModel):
     duration_seconds: float | None = None
     sample_rate: int | None = None
     format: str
-    upload_timestamp: datetime = Field(default_factory=datetime.utcnow)
+    upload_timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     storage_path: str
     message: str = "Audio file uploaded successfully"
 
@@ -264,16 +264,24 @@ class RaceOverview(BaseModel):
     best_lap_time: float | None = None
     average_lap_time: float | None = None
     baseline_lap_time: float | None = None
-    laps: list[LapData] = []
+    laps: list[LapData] = Field(default_factory=list)
     analyses: list[str] = Field(
         default_factory=list, description="List of analysis file_ids linked"
     )
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # ─── Generic ─────────────────────────────────────────────────────────────────
 
 
+class ErrorDetail(BaseModel):
+    code: str
+    message: str
+    request_id: str
+    details: list[dict] | None = None
+
+
 class ErrorResponse(BaseModel):
     detail: str
     error_code: str | None = None
+    error: ErrorDetail

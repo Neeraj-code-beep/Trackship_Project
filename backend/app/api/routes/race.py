@@ -7,6 +7,7 @@ from typing import Annotated
 from backend.app.analytics.lap_performance import compute_lap_baseline
 from backend.app.api.routes import _stores
 from backend.app.core.config import settings
+from backend.app.core.errors import RaceNotFoundError
 from backend.app.schemas.schemas import (
     ErrorResponse,
     LapIngestionRequest,
@@ -20,7 +21,7 @@ from backend.app.services.lap_service import (
 from backend.app.services.lap_service import (
     ingest_laps as ingest_laps_service,
 )
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, UploadFile
 
 router = APIRouter(prefix="/race", tags=["Race"])
 
@@ -79,7 +80,7 @@ async def ingest_laps_csv(
 async def get_race(race_id: str):
     """Retrieve a race overview by stable race ID."""
     if race_id not in _stores.race_store:
-        raise HTTPException(status_code=404, detail=f"Race '{race_id}' not found.")
+        raise RaceNotFoundError(race_id)
 
     race = _stores.race_store[race_id]
     laps = race["laps"]
