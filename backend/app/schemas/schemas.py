@@ -172,6 +172,14 @@ class AnalysisRequest(BaseModel):
     race_id: str | None = None
 
 
+class AnalysisSummary(BaseModel):
+    dominant_state: EmotionLabel
+    average_stress_score: float = Field(ge=0.0, le=100.0)
+    average_fatigue_score: float = Field(ge=0.0, le=100.0)
+    average_calm_score: float = Field(ge=0.0, le=100.0)
+    segments_analyzed: int = Field(ge=0)
+
+
 class AlignedLapEmotion(BaseModel):
     lap_number: int
     lap_time_seconds: float
@@ -209,6 +217,11 @@ class FatigueTrend(BaseModel):
     reason: str | None = None
 
 
+class CorrelationSummary(BaseModel):
+    stress_vs_lap_delta: CorrelationResult
+    fatigue_vs_lap_delta: CorrelationResult
+
+
 class InsightItem(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     severity: InsightSeverity
@@ -224,12 +237,18 @@ class InsightItem(BaseModel):
 
 
 class AnalysisResponse(BaseModel):
+    analysis_id: str
+    audio_id: str
     file_id: str
     race_id: str | None = None
+    summary: AnalysisSummary
     transcription: TranscriptionResult | None = None
-    driver_states: list[DriverState] = []
-    aligned_laps: list[AlignedLapEmotion] = []
-    insights: list[InsightItem] = []
+    acoustic_analysis: AcousticAnalysis = Field(default_factory=AcousticAnalysis)
+    driver_states: list[DriverState] = Field(default_factory=list)
+    aligned_laps: list[AlignedLapEmotion] = Field(default_factory=list)
+    correlations: CorrelationSummary
+    fatigue_trend: FatigueTrend
+    insights: list[InsightItem] = Field(default_factory=list)
     overall_stress: float = 0.0
     overall_fatigue: float = 0.0
     processing_time_ms: float = 0.0
