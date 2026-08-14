@@ -162,10 +162,16 @@ class AnalysisRequest(BaseModel):
 class AlignedLapEmotion(BaseModel):
     lap_number: int
     lap_time_seconds: float
+    start_time: float = 0.0
+    end_time: float = 0.0
     delta_to_best: float = 0.0
     dominant_emotion: EmotionLabel
     stress_level: float = Field(ge=0.0, le=1.0, default=0.0)
     fatigue_level: float = Field(ge=0.0, le=1.0, default=0.0)
+    stress_score: float = Field(ge=0.0, le=100.0, default=0.0)
+    fatigue_score: float = Field(ge=0.0, le=100.0, default=0.0)
+    calm_score: float = Field(ge=0.0, le=100.0, default=0.0)
+    segment_ids: list[str] = Field(default_factory=list)
 
 
 class InsightItem(BaseModel):
