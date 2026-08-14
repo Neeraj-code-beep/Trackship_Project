@@ -27,6 +27,12 @@ class InsightSeverity(str, Enum):
     CRITICAL = "critical"
 
 
+class InsightPriority(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
 # ─── Audio Schemas ────────────────────────────────────────────────────────────
 
 
@@ -206,8 +212,12 @@ class FatigueTrend(BaseModel):
 class InsightItem(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     severity: InsightSeverity
+    priority: InsightPriority = InsightPriority.LOW
+    type: str = ""
+    title: str = ""
     category: str
     message: str
+    evidence: dict = Field(default_factory=dict)
     lap_number: int | None = None
     timestamp: float | None = None
     data: dict | None = None
