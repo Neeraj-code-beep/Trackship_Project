@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: float = 50.0
     MIN_AUDIO_DURATION_SECONDS: float = 0.5
     MAX_AUDIO_DURATION_SECONDS: float = 600.0
+    MAX_LAP_CSV_SIZE_MB: float = 2.0
     ALLOWED_EXTENSIONS: set[str] = {".wav", ".mp3", ".m4a", ".flac"}
 
     ASR_MODEL_NAME: str = "tiny"
@@ -40,6 +41,10 @@ class Settings(BaseSettings):
     def max_upload_size_bytes(self) -> int:
         """Configured upload limit converted to bytes."""
         return int(self.MAX_UPLOAD_SIZE_MB * 1024 * 1024)
+
+    @property
+    def max_lap_csv_size_bytes(self) -> int:
+        return int(self.MAX_LAP_CSV_SIZE_MB * 1024 * 1024)
 
     @model_validator(mode="after")
     def resolve_runtime_paths(self) -> "Settings":

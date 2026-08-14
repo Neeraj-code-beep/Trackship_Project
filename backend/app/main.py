@@ -13,6 +13,7 @@ from backend.app.api.routes.audio import router as audio_router
 from backend.app.api.routes.race import router as race_router
 from backend.app.audio.validation import AudioValidationError
 from backend.app.core.config import settings
+from backend.app.services.lap_service import LapDataValidationError
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -70,6 +71,14 @@ async def audio_validation_handler(request: Request, exc: AudioValidationError):
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.message, "error_code": exc.error_code},
+    )
+
+
+@app.exception_handler(LapDataValidationError)
+async def lap_validation_handler(request: Request, exc: LapDataValidationError):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": str(exc), "error_code": exc.error_code},
     )
 
 

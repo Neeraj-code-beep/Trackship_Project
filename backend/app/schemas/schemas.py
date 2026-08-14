@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # ─── Enums ────────────────────────────────────────────────────────────────────
 
@@ -122,8 +122,12 @@ class AcousticAnalysis(BaseModel):
 
 
 class LapData(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+
     lap_number: int = Field(ge=1)
-    lap_time_seconds: float = Field(gt=0)
+    lap_time_seconds: float = Field(gt=0, le=3600)
+    start_time: float | None = Field(default=None, ge=0)
+    end_time: float | None = Field(default=None, gt=0)
     sector_1: float | None = None
     sector_2: float | None = None
     sector_3: float | None = None
@@ -135,9 +139,9 @@ class LapData(BaseModel):
 
 
 class LapIngestionRequest(BaseModel):
-    race_id: str
-    driver_name: str
-    laps: list[LapData]
+    race_id: str = Field(min_length=1, max_length=100)
+    driver_name: str = Field(min_length=1, max_length=100)
+    laps: list[LapData] = Field(min_length=1, max_length=10_000)
 
 
 class LapIngestionResponse(BaseModel):
