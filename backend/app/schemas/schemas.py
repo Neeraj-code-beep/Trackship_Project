@@ -6,14 +6,13 @@ All request/response models are defined here for strict type safety.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
 
-from pydantic import BaseModel, Field
-
+from pydantic import BaseModel, ConfigDict, Field
 
 # ─── Enums ────────────────────────────────────────────────────────────────────
+
 
 class EmotionLabel(str, Enum):
     CALM = "calm"
@@ -28,21 +27,29 @@ class InsightSeverity(str, Enum):
     CRITICAL = "critical"
 
 
+class InsightPriority(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
 # ─── Audio Schemas ────────────────────────────────────────────────────────────
+
 
 class AudioUploadResponse(BaseModel):
     file_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     filename: str
     file_size_bytes: int
-    duration_seconds: Optional[float] = None
-    sample_rate: Optional[int] = None
+    duration_seconds: float | None = None
+    sample_rate: int | None = None
     format: str
-    upload_timestamp: datetime = Field(default_factory=datetime.utcnow)
+    upload_timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     storage_path: str
     message: str = "Audio file uploaded successfully"
 
 
 # ─── Emotion / Driver State Schemas ──────────────────────────────────────────
+
 
 class EmotionProbabilities(BaseModel):
     calm: float = Field(ge=0.0, le=1.0, default=0.0)
@@ -51,52 +58,96 @@ class EmotionProbabilities(BaseModel):
     tired: float = Field(ge=0.0, le=1.0, default=0.0)
 
 
+class AcousticFeatures(BaseModel):
+    rms_energy: float = Field(ge=0.0)
+    pitch_mean_hz: float | None = Field(default=None, ge=0.0)
+    pitch_std_hz: float | None = Field(default=None, ge=0.0)
+    zero_crossing_rate: float = Field(ge=0.0, le=1.0)
+    spectral_centroid_hz: float = Field(ge=0.0)
+    duration_seconds: float = Field(ge=0.0)
+    pause_ratio: float = Field(ge=0.0, le=1.0)
+    speech_rate_wpm: float | None = Field(default=None, ge=0.0)
+    voiced_ratio: float = Field(ge=0.0, le=1.0)
+    energy_variability: float = Field(ge=0.0)
+
+
 class DriverState(BaseModel):
+    segment_id: str | None = None
     timestamp: float = Field(description="Seconds from start of audio")
+    start_time: float | None = None
+    end_time: float | None = None
     dominant_emotion: EmotionLabel
     probabilities: EmotionProbabilities
+    raw_emotions: dict[str, float] = Field(default_factory=dict)
     confidence: float = Field(ge=0.0, le=1.0)
-    rms_energy: Optional[float] = None
-    speech_rate_wpm: Optional[float] = None
+    stress_score: float = Field(default=0.0, ge=0.0, le=100.0)
+    fatigue_score: float = Field(default=0.0, ge=0.0, le=100.0)
+    calm_score: float = Field(default=0.0, ge=0.0, le=100.0)
+    signals: dict[str, float] = Field(default_factory=dict)
+    drivers: list[str] = Field(default_factory=list)
+    acoustic_features: AcousticFeatures | None = None
+    rms_energy: float | None = None
+    speech_rate_wpm: float | None = None
 
 
 # ─── Transcription Schemas ────────────────────────────────────────────────────
 
+
 class TranscriptSegment(BaseModel):
+    id: str
     start_time: float
     end_time: float
     text: str
-    confidence: float = Field(ge=0.0, le=1.0, default=0.9)
-    speaker: Optional[str] = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    speaker: str | None = None
 
 
 class TranscriptionResult(BaseModel):
     file_id: str
     full_text: str
-    segments: list[TranscriptSegment] = []
-    language: str = "en"
+    segments: list[TranscriptSegment] = Field(default_factory=list)
+    language: str | None = None
     duration_seconds: float = 0.0
+    detected_speech: bool = False
+
+
+class SegmentAcousticFeatures(BaseModel):
+    segment_id: str
+    start_time: float
+    end_time: float
+    features: AcousticFeatures
+    session_deviations: dict[str, float] = Field(default_factory=dict)
+
+
+class AcousticAnalysis(BaseModel):
+    session_baselines: dict[str, float] = Field(default_factory=dict)
+    segments: list[SegmentAcousticFeatures] = Field(default_factory=list)
 
 
 # ─── Lap / Race Schemas ──────────────────────────────────────────────────────
 
+
 class LapData(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+
     lap_number: int = Field(ge=1)
-    lap_time_seconds: float = Field(gt=0)
-    sector_1: Optional[float] = None
-    sector_2: Optional[float] = None
-    sector_3: Optional[float] = None
-    timestamp: Optional[float] = Field(
+    lap_time_seconds: float = Field(gt=0, le=3600)
+    start_time: float | None = Field(default=None, ge=0)
+    end_time: float | None = Field(default=None, gt=0)
+    sector_1: float | None = None
+    sector_2: float | None = None
+    sector_3: float | None = None
+    timestamp: float | None = Field(
         default=None, description="Race clock timestamp when lap completed"
     )
-    tyre_compound: Optional[str] = None
-    fuel_load_kg: Optional[float] = None
+    tyre_compound: str | None = None
+    fuel_load_kg: float | None = None
 
 
 class LapIngestionRequest(BaseModel):
-    race_id: str
-    driver_name: str
-    laps: list[LapData]
+    race_id: str = Field(min_length=1, max_length=100)
+    driver_name: str = Field(min_length=1, max_length=100)
+    laps: list[LapData] = Field(min_length=1, max_length=10_000)
 
 
 class LapIngestionResponse(BaseModel):
@@ -106,39 +157,98 @@ class LapIngestionResponse(BaseModel):
     message: str = "Lap data ingested successfully"
 
 
+class LapPerformanceBaseline(BaseModel):
+    baseline_lap_time: float = Field(gt=0)
+    method: str
+    sample_size: int = Field(ge=1)
+    outlier_lap_numbers: list[int] = Field(default_factory=list)
+
+
 # ─── Analysis Schemas ─────────────────────────────────────────────────────────
+
 
 class AnalysisRequest(BaseModel):
     file_id: str
-    race_id: Optional[str] = None
+    race_id: str | None = None
+
+
+class AnalysisSummary(BaseModel):
+    dominant_state: EmotionLabel
+    average_stress_score: float = Field(ge=0.0, le=100.0)
+    average_fatigue_score: float = Field(ge=0.0, le=100.0)
+    average_calm_score: float = Field(ge=0.0, le=100.0)
+    segments_analyzed: int = Field(ge=0)
 
 
 class AlignedLapEmotion(BaseModel):
     lap_number: int
     lap_time_seconds: float
+    start_time: float = 0.0
+    end_time: float = 0.0
+    baseline_lap_time: float = 0.0
+    lap_delta: float = 0.0
     delta_to_best: float = 0.0
+    is_timing_outlier: bool = False
     dominant_emotion: EmotionLabel
     stress_level: float = Field(ge=0.0, le=1.0, default=0.0)
     fatigue_level: float = Field(ge=0.0, le=1.0, default=0.0)
+    stress_score: float = Field(ge=0.0, le=100.0, default=0.0)
+    fatigue_score: float = Field(ge=0.0, le=100.0, default=0.0)
+    calm_score: float = Field(ge=0.0, le=100.0, default=0.0)
+    segment_ids: list[str] = Field(default_factory=list)
+
+
+class CorrelationResult(BaseModel):
+    metric: str
+    pearson_r: float | None = Field(default=None, ge=-1.0, le=1.0)
+    sample_size: int = Field(ge=0)
+    direction: str
+    strength: str
+    reason: str | None = None
+    excluded_lap_numbers: list[int] = Field(default_factory=list)
+
+
+class FatigueTrend(BaseModel):
+    trend: str
+    change: float | None = None
+    early_average: float | None = Field(default=None, ge=0.0, le=100.0)
+    late_average: float | None = Field(default=None, ge=0.0, le=100.0)
+    sample_size: int = Field(ge=0)
+    reason: str | None = None
+
+
+class CorrelationSummary(BaseModel):
+    stress_vs_lap_delta: CorrelationResult
+    fatigue_vs_lap_delta: CorrelationResult
 
 
 class InsightItem(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     severity: InsightSeverity
+    priority: InsightPriority = InsightPriority.LOW
+    type: str = ""
+    title: str = ""
     category: str
     message: str
-    lap_number: Optional[int] = None
-    timestamp: Optional[float] = None
-    data: Optional[dict] = None
+    evidence: dict = Field(default_factory=dict)
+    lap_number: int | None = None
+    timestamp: float | None = None
+    data: dict | None = None
 
 
 class AnalysisResponse(BaseModel):
+    analysis_id: str
+    audio_id: str
     file_id: str
-    race_id: Optional[str] = None
-    transcription: Optional[TranscriptionResult] = None
-    driver_states: list[DriverState] = []
-    aligned_laps: list[AlignedLapEmotion] = []
-    insights: list[InsightItem] = []
+    race_id: str | None = None
+    summary: AnalysisSummary
+    transcription: TranscriptionResult | None = None
+    acoustic_analysis: AcousticAnalysis = Field(default_factory=AcousticAnalysis)
+    driver_states: list[DriverState] = Field(default_factory=list)
+    aligned_laps: list[AlignedLapEmotion] = Field(default_factory=list)
+    correlations: CorrelationSummary
+    fatigue_trend: FatigueTrend
+    insights: list[InsightItem] = Field(default_factory=list)
     overall_stress: float = 0.0
     overall_fatigue: float = 0.0
     processing_time_ms: float = 0.0
@@ -146,21 +256,32 @@ class AnalysisResponse(BaseModel):
 
 # ─── Race Retrieval ──────────────────────────────────────────────────────────
 
+
 class RaceOverview(BaseModel):
     race_id: str
     driver_name: str
     total_laps: int
-    best_lap_time: Optional[float] = None
-    average_lap_time: Optional[float] = None
-    laps: list[LapData] = []
+    best_lap_time: float | None = None
+    average_lap_time: float | None = None
+    baseline_lap_time: float | None = None
+    laps: list[LapData] = Field(default_factory=list)
     analyses: list[str] = Field(
         default_factory=list, description="List of analysis file_ids linked"
     )
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # ─── Generic ─────────────────────────────────────────────────────────────────
 
+
+class ErrorDetail(BaseModel):
+    code: str
+    message: str
+    request_id: str
+    details: list[dict] | None = None
+
+
 class ErrorResponse(BaseModel):
     detail: str
-    error_code: Optional[str] = None
+    error_code: str | None = None
+    error: ErrorDetail

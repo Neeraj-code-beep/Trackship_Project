@@ -1,143 +1,152 @@
-"""
-Transcription service.
-Interfaces with Whisper ASR model (lazy-loaded) or provides a rule-based fallback
-that generates realistic timestamped transcript segments from audio features.
-"""
+"""Real Whisper speech-to-text service with no implicit fake results."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
-import time
-import random
+import math
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
-from backend.app.services.model_registry import registry
-from backend.app.audio.preprocessing import extract_audio_segments
-from backend.app.schemas.schemas import TranscriptSegment, TranscriptionResult
+from backend.app.audio.preprocessing import PreprocessedAudio, preprocess_audio
+from backend.app.core.config import settings
+from backend.app.schemas.schemas import TranscriptionResult, TranscriptSegment
+from backend.app.services.model_registry import ModelUnavailableError, registry
 
 logger = logging.getLogger(__name__)
 
 
-# ─── Fallback Phrases ────────────────────────────────────────────────────────
-# Realistic racing radio comms for demo/fallback mode
-_DRIVER_PHRASES = [
-    "Box box box, tyres are gone.",
-    "Copy, we are looking at the data.",
-    "Push push push, gap is closing.",
-    "Front left is graining badly.",
-    "I can't see anything, too much spray.",
-    "That was a close one into turn four.",
-    "We need to extend this stint.",
-    "Rear is sliding everywhere.",
-    "Radio check, can you hear me?",
-    "What's the gap to P3?",
-    "These tyres feel amazing, great job guys.",
-    "I'm struggling with the balance, massive understeer.",
-    "Okay copy, I'll manage the pace.",
-    "Something doesn't feel right on the brakes.",
-    "Blue flags! Blue flags! Come on!",
-    "Brilliant pace, keep it up.",
-    "I'm losing power on the exit of turn 7.",
-    "Weather update? Is rain coming?",
-    "Let's go for it, full send.",
-    "I'm tired, visibility is getting worse.",
-]
+class TranscriptionError(RuntimeError):
+    """A safe transcription failure for the orchestration/API layers."""
 
-
-def _fallback_transcription(
-    data: bytes,
-    ext: str,
-    file_id: str,
-) -> TranscriptionResult:
-    """
-    Generate realistic fallback transcription when Whisper is unavailable.
-    Uses audio segment analysis (RMS energy) to place speech in active regions.
-    """
-    segments_meta = extract_audio_segments(data, ext, segment_duration_seconds=5.0)
-
-    transcript_segments: list[TranscriptSegment] = []
-    full_parts: list[str] = []
-
-    for seg in segments_meta:
-        # Higher RMS → more likely to contain speech
-        if seg["rms_energy"] > 0.02 or random.random() < 0.6:
-            phrase = random.choice(_DRIVER_PHRASES)
-            ts = TranscriptSegment(
-                start_time=seg["start_time"],
-                end_time=seg["end_time"],
-                text=phrase,
-                confidence=round(random.uniform(0.75, 0.98), 2),
-                speaker="Driver",
-            )
-            transcript_segments.append(ts)
-            full_parts.append(phrase)
-
-    total_duration = segments_meta[-1]["end_time"] if segments_meta else 0.0
-
-    return TranscriptionResult(
-        file_id=file_id,
-        full_text=" ".join(full_parts),
-        segments=transcript_segments,
-        language="en",
-        duration_seconds=total_duration,
-    )
+    def __init__(
+        self,
+        message: str,
+        error_code: str = "TRANSCRIPTION_FAILED",
+        status_code: int = 500,
+    ) -> None:
+        self.error_code = error_code
+        self.status_code = status_code
+        super().__init__(message)
 
 
 async def transcribe_audio(
     data: bytes,
     ext: str,
     file_id: str,
-    storage_path: Optional[Path] = None,
+    storage_path: Path | None = None,
 ) -> TranscriptionResult:
-    """
-    Transcribe audio file. Attempts Whisper first, falls back to rule-based.
-    
-    Args:
-        data: Raw audio bytes
-        ext: File extension (e.g. ".wav")
-        file_id: Unique upload identifier
-        storage_path: Path to saved file (needed for Whisper)
-    
-    Returns:
-        TranscriptionResult with timestamped segments
-    """
-    start = time.time()
+    """Decode and transcribe uploaded audio; ``storage_path`` is retained for compatibility."""
+    del storage_path
+    try:
+        audio = await asyncio.to_thread(preprocess_audio, data, ext)
+    except Exception as exc:
+        raise TranscriptionError("Audio preprocessing failed before transcription.") from exc
+    return await transcribe_preprocessed(audio, file_id)
 
-    whisper_model = registry.get_whisper_model()
 
-    if whisper_model is not None and storage_path is not None:
-        try:
-            logger.info(f"Transcribing {file_id} with Whisper...")
-            result = whisper_model.transcribe(str(storage_path))
+async def transcribe_preprocessed(
+    audio: PreprocessedAudio,
+    file_id: str,
+) -> TranscriptionResult:
+    """Transcribe a prepared waveform without decoding it again."""
+    if audio.is_silent:
+        logger.info("No speech inference attempted for silent audio '%s'.", file_id)
+        return TranscriptionResult(
+            file_id=file_id,
+            full_text="",
+            segments=[],
+            language=None,
+            duration_seconds=audio.duration_seconds,
+            detected_speech=False,
+        )
 
-            segments = []
-            for seg in result.get("segments", []):
-                segments.append(
-                    TranscriptSegment(
-                        start_time=seg["start"],
-                        end_time=seg["end"],
-                        text=seg["text"].strip(),
-                        confidence=round(seg.get("avg_logprob", -0.5) + 1.0, 2),
-                        speaker="Driver",
-                    )
-                )
+    return await asyncio.to_thread(_run_whisper, audio, file_id)
 
-            elapsed = time.time() - start
-            logger.info(f"Whisper transcription completed in {elapsed:.2f}s")
 
-            return TranscriptionResult(
-                file_id=file_id,
-                full_text=result.get("text", "").strip(),
-                segments=segments,
-                language=result.get("language", "en"),
-                duration_seconds=sum(
-                    s.end_time - s.start_time for s in segments
-                ),
+def _run_whisper(audio: PreprocessedAudio, file_id: str) -> TranscriptionResult:
+    try:
+        model = registry.get_whisper_model()
+    except ModelUnavailableError as exc:
+        raise TranscriptionError(
+            "The transcription model is unavailable.",
+            error_code="MODEL_UNAVAILABLE",
+            status_code=503,
+        ) from exc
+
+    options: dict[str, Any] = {
+        "fp16": registry.device == "cuda",
+        "verbose": False,
+        "condition_on_previous_text": False,
+    }
+    if settings.ASR_LANGUAGE:
+        options["language"] = settings.ASR_LANGUAGE
+
+    logger.info("Running Whisper transcription for audio '%s'.", file_id)
+    try:
+        result = model.transcribe(audio.model_waveform, **options)
+    except Exception as exc:
+        logger.exception("Whisper inference failed for audio '%s'.", file_id)
+        raise TranscriptionError("Whisper transcription failed.") from exc
+
+    if not isinstance(result, dict):
+        raise TranscriptionError("Whisper returned an invalid transcription result.")
+
+    segments: list[TranscriptSegment] = []
+    for source_index, raw_segment in enumerate(result.get("segments") or [], start=1):
+        if not isinstance(raw_segment, dict):
+            raise TranscriptionError("Whisper returned an invalid transcript segment.")
+        text = str(raw_segment.get("text") or "").strip()
+        if not text:
+            continue
+
+        start = _finite_timestamp(raw_segment.get("start"), default=0.0)
+        end = _finite_timestamp(raw_segment.get("end"), default=start)
+        start = min(max(start, 0.0), audio.duration_seconds)
+        end = min(max(end, start), audio.duration_seconds)
+        segments.append(
+            TranscriptSegment(
+                id=f"seg_{source_index:03d}",
+                start_time=round(start, 3),
+                end_time=round(end, 3),
+                text=text,
+                confidence=_segment_confidence(raw_segment),
+                speaker="Driver",
             )
-        except Exception as e:
-            logger.warning(f"Whisper failed: {e}. Falling back to rule-based.")
+        )
 
-    # Fallback
-    logger.info(f"Using fallback transcription for {file_id}")
-    return _fallback_transcription(data, ext, file_id)
+    full_text = " ".join(segment.text for segment in segments)
+    detected_speech = bool(segments)
+    language = str(result.get("language") or settings.ASR_LANGUAGE or "").strip() or None
+    logger.info(
+        "Whisper produced %d speech segments for audio '%s'.",
+        len(segments),
+        file_id,
+    )
+    return TranscriptionResult(
+        file_id=file_id,
+        full_text=full_text,
+        segments=segments,
+        language=language,
+        duration_seconds=audio.duration_seconds,
+        detected_speech=detected_speech,
+    )
+
+
+def _finite_timestamp(value: Any, *, default: float) -> float:
+    try:
+        timestamp = float(value)
+    except (TypeError, ValueError):
+        return default
+    return timestamp if math.isfinite(timestamp) else default
+
+
+def _segment_confidence(raw_segment: dict[str, Any]) -> float | None:
+    """Convert Whisper average log probability to an uncalibrated probability estimate."""
+    try:
+        average_log_probability = float(raw_segment["avg_logprob"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not math.isfinite(average_log_probability):
+        return None
+    return round(math.exp(min(average_log_probability, 0.0)), 4)

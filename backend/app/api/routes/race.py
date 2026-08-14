@@ -1,22 +1,27 @@
-"""
-Race data API routes.
-POST /api/v1/race/laps — ingest lap timing data
-GET  /api/v1/race/{race_id} — retrieve race overview
-"""
+"""Race lap ingestion and retrieval routes."""
 
 from __future__ import annotations
 
-from datetime import datetime
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
-
+from backend.app.analytics.lap_performance import compute_lap_baseline
+from backend.app.api.routes import _stores
+from backend.app.core.config import settings
+from backend.app.core.errors import RaceNotFoundError
 from backend.app.schemas.schemas import (
+    ErrorResponse,
     LapIngestionRequest,
     LapIngestionResponse,
     RaceOverview,
-    ErrorResponse,
 )
-from backend.app.api.routes import _stores
+from backend.app.services.lap_service import (
+    LapDataValidationError,
+    parse_lap_csv,
+)
+from backend.app.services.lap_service import (
+    ingest_laps as ingest_laps_service,
+)
+from fastapi import APIRouter, File, Form, UploadFile
 
 router = APIRouter(prefix="/race", tags=["Race"])
 
@@ -24,73 +29,71 @@ router = APIRouter(prefix="/race", tags=["Race"])
 @router.post(
     "/laps",
     response_model=LapIngestionResponse,
-    summary="Ingest lap timing data",
-    description="Submit lap times, sector splits, and telemetry for a race session.",
+    responses={400: {"model": ErrorResponse, "description": "Invalid lap data"}},
+    summary="Ingest JSON lap timing data",
 )
 async def ingest_laps(request: LapIngestionRequest):
-    """
-    Ingest lap timing data for a race. Creates a new race entry or
-    appends to an existing one.
-    """
-    race_id = request.race_id
-
-    if race_id in _stores.race_store:
-        # Append laps to existing race
-        existing = _stores.race_store[race_id]
-        existing_numbers = {l.lap_number for l in existing["laps"]}
-        new_laps = [l for l in request.laps if l.lap_number not in existing_numbers]
-        existing["laps"].extend(new_laps)
-        laps_added = len(new_laps)
-    else:
-        # Create new race entry
-        _stores.race_store[race_id] = {
-            "race_id": race_id,
-            "driver_name": request.driver_name,
-            "laps": list(request.laps),
-            "analyses": [],
-            "created_at": datetime.utcnow(),
-        }
-        laps_added = len(request.laps)
-
-    return LapIngestionResponse(
-        race_id=race_id,
+    """Validate and store JSON lap timing data."""
+    return ingest_laps_service(
+        _stores.race_store,
+        race_id=request.race_id,
         driver_name=request.driver_name,
-        laps_received=laps_added,
-        message=f"Successfully ingested {laps_added} laps for race '{race_id}'.",
+        laps=request.laps,
+    )
+
+
+@router.post(
+    "/laps/csv",
+    response_model=LapIngestionResponse,
+    responses={400: {"model": ErrorResponse, "description": "Invalid lap CSV"}},
+    summary="Ingest lap timing CSV",
+    description="Accepts UTF-8 CSV with lap, lap_time, and start_time columns.",
+)
+async def ingest_laps_csv(
+    race_id: Annotated[str, Form(min_length=1, max_length=100)],
+    driver_name: Annotated[str, Form(min_length=1, max_length=100)],
+    file: Annotated[UploadFile, File(...)],
+):
+    """Validate a bounded CSV upload and store its normalized laps."""
+    if not file.filename:
+        raise LapDataValidationError("No lap CSV filename was provided.")
+    data = await file.read(settings.max_lap_csv_size_bytes + 1)
+    if len(data) > settings.max_lap_csv_size_bytes:
+        raise LapDataValidationError(
+            f"Lap CSV exceeds the {settings.MAX_LAP_CSV_SIZE_MB:g} MB limit."
+        )
+    laps = parse_lap_csv(data)
+    return ingest_laps_service(
+        _stores.race_store,
+        race_id=race_id,
+        driver_name=driver_name,
+        laps=laps,
     )
 
 
 @router.get(
     "/{race_id}",
     response_model=RaceOverview,
-    responses={
-        404: {"model": ErrorResponse, "description": "Race not found"},
-    },
+    responses={404: {"model": ErrorResponse, "description": "Race not found"}},
     summary="Get race overview",
-    description="Retrieve full race data including laps, best/average times, and linked analyses.",
 )
 async def get_race(race_id: str):
-    """Retrieve race overview by race_id."""
+    """Retrieve a race overview by stable race ID."""
     if race_id not in _stores.race_store:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Race '{race_id}' not found.",
-        )
+        raise RaceNotFoundError(race_id)
 
     race = _stores.race_store[race_id]
     laps = race["laps"]
-
-    best_time = min((l.lap_time_seconds for l in laps), default=None) if laps else None
-    avg_time = (
-        sum(l.lap_time_seconds for l in laps) / len(laps) if laps else None
-    )
-
+    best_time = min((lap.lap_time_seconds for lap in laps), default=None)
+    average_time = sum(lap.lap_time_seconds for lap in laps) / len(laps) if laps else None
+    baseline = compute_lap_baseline(laps) if laps else None
     return RaceOverview(
         race_id=race["race_id"],
         driver_name=race["driver_name"],
         total_laps=len(laps),
-        best_lap_time=round(best_time, 3) if best_time else None,
-        average_lap_time=round(avg_time, 3) if avg_time else None,
+        best_lap_time=round(best_time, 3) if best_time is not None else None,
+        average_lap_time=round(average_time, 3) if average_time is not None else None,
+        baseline_lap_time=baseline.baseline_lap_time if baseline else None,
         laps=laps,
         analyses=race.get("analyses", []),
         created_at=race["created_at"],
