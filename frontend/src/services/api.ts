@@ -3,7 +3,8 @@
  * Configured to communicate exclusively through /api/v1/* endpoints.
  */
 
-import axios, { AxiosProgressEvent } from 'axios';
+import axios from 'axios';
+import type { AxiosProgressEvent } from 'axios';
 import { ENDPOINTS } from './endpoints';
 import type {
   AudioUploadResponse,

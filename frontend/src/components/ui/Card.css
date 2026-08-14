@@ -1,0 +1,15 @@
+.sc-card {
+  padding: var(--space-20);
+  border-radius: var(--radius-lg);
+  transition: transform var(--motion-fast), border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.sc-card--interactive {
+  cursor: pointer;
+}
+
+.sc-card--interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-md);
+}

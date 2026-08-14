@@ -1,0 +1,782 @@
+/* ==========================================================================
+   SILENT CO-DRIVER — LANDING PAGE STYLES (SINGLE SOURCE OF TRUTH)
+   Obsidian Base (#050608) · Surface 1 (#0B0E12) · Surface 2 (#12161C)
+   Brand Accent (#C8FF3D) · Typography (#F7F7F5)
+   ========================================================================== */
+
+.sc-landing {
+  position: relative;
+  min-height: 100vh;
+  background-color: var(--color-bg-app);
+  color: var(--color-text-primary);
+  overflow-x: hidden;
+}
+
+/* Background System Grid & Lighting */
+.sc-landing__bg-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sc-landing__ambient-glow {
+  position: absolute;
+  top: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(200, 255, 61, 0.04) 0%, rgba(5, 6, 8, 0) 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sc-landing__container {
+  position: relative;
+  z-index: 1;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+/* Utility Colors & Gradients */
+.text-lime { color: var(--color-brand-lime); }
+.text-alert { color: var(--color-driver-stressed); }
+.text-warning { color: var(--color-driver-fatigue); }
+.text-muted { color: var(--color-text-muted); }
+
+.text-gradient-lime {
+  background: linear-gradient(135deg, #C8FF3D 0%, #FFFFFF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Surface Level Classes */
+.surface-level-1 {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+.surface-level-2 {
+  background: var(--color-bg-surface-elevated);
+  border: 1px solid var(--color-border-subtle);
+}
+
+/* ── Section Dividers with Monospace Node Badges ──────────────────────── */
+.sc-section-divider {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 32px;
+  opacity: 0.7;
+}
+
+.sc-section-divider__line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);
+}
+
+.sc-section-divider__node {
+  padding: 4px 12px;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-app);
+}
+
+/* ── 01 HERO SECTION ──────────────────────────────────────────────────── */
+.sc-landing__hero {
+  padding: 120px 0 80px 0;
+}
+
+.sc-hero-content {
+  text-align: center;
+  max-width: 960px;
+  margin: 0 auto 64px auto;
+}
+
+.sc-hero-eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.sc-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(200, 255, 61, 0.06);
+  border: 1px solid rgba(200, 255, 61, 0.25);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-brand-lime);
+}
+
+.sc-hero-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-brand-lime);
+  box-shadow: 0 0 8px var(--color-brand-lime);
+}
+
+.sc-hero-meta {
+  color: var(--color-text-muted);
+}
+
+.sc-hero-title {
+  margin: 0 0 24px 0;
+}
+
+.sc-hero-subtitle {
+  max-width: 760px;
+  margin: 0 auto 40px auto;
+  color: var(--color-text-secondary);
+}
+
+.sc-hero-cta-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+/* Hero Visual Workstation Box */
+.sc-hero-visual {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.sc-hero-visual__glass {
+  background: var(--color-bg-surface-glass);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-2xl);
+  padding: 32px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8), 0 0 24px rgba(200, 255, 61, 0.08);
+}
+
+.sc-hero-visual__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.sc-hero-visual__live {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sc-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-brand-lime);
+  box-shadow: 0 0 10px var(--color-brand-lime);
+}
+
+.sc-hero-visual__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.sc-hero-visual__metric {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  transition: transform var(--motion-fast), border-color var(--motion-fast);
+}
+
+.sc-hero-visual__metric-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sc-hero-visual__sectors {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 12px 20px;
+  background: var(--color-bg-surface-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+}
+
+.sc-sector-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sc-sector-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border-subtle);
+}
+
+.sc-hero-visual__waveform-strip {
+  padding: 14px 20px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+}
+
+/* ── GENERAL SECTION LAYOUTS ──────────────────────────────────────────── */
+.sc-section {
+  padding: 100px 0;
+}
+
+.sc-section-header {
+  margin-bottom: 64px;
+}
+
+.sc-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+
+/* ── 02 PRODUCT SIGNAL PIPELINE ───────────────────────────────────────── */
+.sc-signal-pipeline {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sc-signal-pipeline__track {
+  position: absolute;
+  top: 50%;
+  left: 40px;
+  right: 40px;
+  height: 2px;
+  background: var(--color-border-subtle);
+  pointer-events: none;
+  z-index: 0;
+  transform: translateY(-50%);
+}
+
+.sc-signal-pipeline__beam {
+  width: 120px;
+  height: 100%;
+  background: linear-gradient(to right, transparent, var(--color-brand-lime), transparent);
+}
+
+.sc-pipeline-step {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  padding: 28px 24px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sc-pipeline-step--active {
+  border-color: var(--color-brand-lime) !important;
+  background: var(--color-bg-surface-elevated);
+}
+
+.sc-pipeline-step--accent {
+  border-color: rgba(200, 255, 61, 0.35);
+}
+
+.sc-pipeline-step__num {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: 16px;
+}
+
+.sc-pipeline-step__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface-elevated);
+  border: 1px solid var(--color-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.sc-pipeline-tag {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 4px 10px;
+  font-size: 0.6875rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-bg-surface-interactive);
+  color: var(--color-text-muted);
+}
+
+.sc-pipeline-tag--lime {
+  background: rgba(200, 255, 61, 0.1);
+  color: var(--color-brand-lime);
+}
+
+.sc-pipeline-arrow {
+  position: relative;
+  z-index: 1;
+  color: var(--color-text-muted);
+  opacity: 0.5;
+}
+
+/* ── 03 LIVE TELEMETRY READOUT ───────────────────────────────────────── */
+.sc-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.sc-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.sc-telemetry-box {
+  padding: 32px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-default);
+  transition: border-color var(--motion-standard);
+}
+
+.sc-telemetry-box__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.sc-telemetry-box__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.sc-metric-unit {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px;
+  background: var(--color-bg-surface-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  transition: transform var(--motion-fast), border-color var(--motion-fast);
+}
+
+.sc-metric-unit:hover {
+  border-color: rgba(200, 255, 61, 0.3);
+}
+
+/* ── 04 DRIVER STATE DEMO ────────────────────────────────────────────── */
+.sc-state-demo {
+  padding: 32px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-default);
+}
+
+.sc-state-demo__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.sc-state-demo__tabs {
+  display: flex;
+  gap: 12px;
+}
+
+.sc-state-tab {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface-interactive);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--motion-fast);
+}
+
+.sc-state-tab--active {
+  border-color: var(--color-brand-lime);
+  color: var(--color-brand-lime);
+  background: rgba(200, 255, 61, 0.08);
+}
+
+.sc-state-hero-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  border: 1px solid;
+  margin-bottom: 24px;
+}
+
+.sc-state-hero-box__left {
+  max-width: 70%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sc-state-spectrum {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding: 20px;
+  background: var(--color-bg-surface-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.sc-spectrum-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sc-spectrum-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sc-spectrum-bar-track {
+  width: 100%;
+  height: 6px;
+  background: var(--color-bg-app);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.sc-spectrum-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+}
+
+/* ── 05 AI RACE ENGINEER CARD ───────────────────────────────────────── */
+.sc-ai-card {
+  padding: 32px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-default);
+  transition: border-color 0.25s ease;
+}
+
+.sc-ai-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.sc-alert-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.sc-alert-badge--critical {
+  background: rgba(255, 82, 82, 0.15);
+  color: #FF5252;
+  border: 1px solid rgba(255, 82, 82, 0.3);
+}
+
+.sc-ai-evidence {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--color-bg-surface-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.sc-ai-recommendation {
+  margin-top: 20px;
+  padding: 20px;
+  background: rgba(200, 255, 61, 0.06);
+  border: 1px solid rgba(200, 255, 61, 0.35);
+  border-radius: var(--radius-md);
+}
+
+/* ── 06 RADIO TO INSIGHT ─────────────────────────────────────────────── */
+.sc-radio-demo {
+  padding: 32px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-default);
+}
+
+.sc-radio-demo__top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.sc-play-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--color-brand-lime);
+  color: var(--color-text-inverse);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--motion-fast), background-color var(--motion-fast);
+}
+
+.sc-play-btn:hover {
+  transform: scale(1.06);
+  background-color: var(--color-brand-lime-hover);
+}
+
+.sc-play-btn--active {
+  box-shadow: 0 0 16px rgba(200, 255, 61, 0.4);
+}
+
+.sc-radio-demo__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sc-radio-demo__status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sc-radio-demo__wave {
+  padding: 18px 24px;
+  background: var(--color-bg-surface-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: 24px;
+}
+
+.sc-transcript-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.sc-transcript-line {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--color-bg-surface-elevated);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.sc-transcript-line--engineer {
+  background: rgba(200, 255, 61, 0.04);
+  border-color: rgba(200, 255, 61, 0.2);
+}
+
+.sc-speaker-tag {
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  background: var(--color-bg-surface-interactive);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.sc-speaker-tag--engineer {
+  background: rgba(200, 255, 61, 0.15);
+  color: var(--color-brand-lime);
+}
+
+.sc-flag-pill {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  background: rgba(255, 82, 82, 0.15);
+  color: #FF5252;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.sc-flag-pill--lime {
+  background: rgba(200, 255, 61, 0.15);
+  color: var(--color-brand-lime);
+}
+
+/* ── 07 CHART CARD ───────────────────────────────────────────────────── */
+.sc-chart-card {
+  padding: 32px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-default);
+}
+
+/* ── 08 WHY SILENT CO-DRIVER ─────────────────────────────────────────── */
+.sc-why-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.sc-why-card {
+  padding: 32px 24px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── 10 FINAL CTA ────────────────────────────────────────────────────── */
+.sc-section--final {
+  padding: 140px 0;
+  border-top: 1px solid var(--color-border-subtle);
+  background: radial-gradient(circle at bottom center, rgba(200, 255, 61, 0.05) 0%, transparent 70%);
+}
+
+/* ── RESPONSIVE BREAKPOINTS ─────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .sc-grid-2col {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .sc-hero-visual__metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sc-signal-pipeline {
+    flex-direction: column;
+  }
+
+  .sc-signal-pipeline__track {
+    display: none;
+  }
+
+  .sc-pipeline-arrow {
+    transform: rotate(90deg);
+  }
+
+  .sc-state-spectrum {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sc-why-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .sc-landing__hero {
+    padding: 80px 0 60px 0;
+  }
+
+  .sc-hero-visual__metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-hero-visual__sectors {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .sc-sector-divider {
+    display: none;
+  }
+
+  .sc-state-demo__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .sc-state-hero-box {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .sc-state-hero-box__left {
+    max-width: 100%;
+  }
+
+  .sc-state-spectrum {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-why-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sc-hero-cta-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .sc-transcript-line {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .sc-flag-pill {
+    margin-left: 0;
+  }
+}

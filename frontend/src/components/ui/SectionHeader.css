@@ -1,0 +1,27 @@
+.sc-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-16);
+}
+
+.sc-section-header__title-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.sc-section-header__icon {
+  color: var(--color-brand-lime);
+  display: flex;
+  align-items: center;
+}
+
+.sc-section-header__title {
+  margin: 0;
+}
+
+.sc-section-header__subtitle {
+  margin: 0;
+  color: var(--color-text-muted);
+}

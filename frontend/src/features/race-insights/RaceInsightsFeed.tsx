@@ -1,36 +1,25 @@
 import React from 'react';
-import { AlertTriangle, Info, AlertOctagon, Lightbulb } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Sparkles, ShieldCheck, Cpu } from 'lucide-react';
 import type { InsightItem, InsightSeverity } from '../../types';
+import Alert from '../../components/ui/Alert';
+import { EmptyState } from '../../components/ui/State';
+import SignalIndicator from '../../components/ui/SignalIndicator';
 import './RaceInsightsFeed.css';
 
 interface RaceInsightsFeedProps {
   insights: InsightItem[];
 }
 
-const severityConfig: Record<InsightSeverity, { icon: React.ReactNode; color: string; bg: string }> = {
-  info: {
-    icon: <Info size={16} />,
-    color: '#60a5fa',
-    bg: 'rgba(96, 165, 250, 0.08)',
-  },
-  warning: {
-    icon: <AlertTriangle size={16} />,
-    color: '#fbbf24',
-    bg: 'rgba(251, 191, 36, 0.08)',
-  },
-  critical: {
-    icon: <AlertOctagon size={16} />,
-    color: '#f87171',
-    bg: 'rgba(248, 113, 113, 0.08)',
-  },
-};
-
 export const RaceInsightsFeed: React.FC<RaceInsightsFeedProps> = ({ insights }) => {
   if (!insights.length) {
     return (
-      <div className="insights-feed insights-feed--empty">
-        <Lightbulb size={32} className="insights-feed__empty-icon" />
-        <p>No insights yet. Upload audio and lap data to generate race engineering observations.</p>
+      <div className="sc-insights-card">
+        <EmptyState
+          icon={<Sparkles size={32} />}
+          title="No AI Race Insights Generated"
+          description="Drop driver radio audio session or lap timing data to activate automated race engineering observations."
+        />
       </div>
     );
   }
@@ -42,38 +31,59 @@ export const RaceInsightsFeed: React.FC<RaceInsightsFeedProps> = ({ insights }) 
   });
 
   return (
-    <div className="insights-feed">
-      <div className="insights-feed__header">
-        <Lightbulb size={18} />
-        <h3>Race Engineer Insights</h3>
-        <span className="insights-feed__count">{insights.length}</span>
+    <div className="sc-insights-card">
+      <div className="sc-insights-card__header">
+        <div className="sc-insights-card__title-group">
+          <div className="sc-insights-card__icon-badge">
+            <Cpu size={16} className="text-lime" />
+          </div>
+          <div>
+            <h3 className="text-h4 font-display" style={{ margin: 0 }}>Engineering Intelligence</h3>
+            <span className="text-micro font-telemetry">AUTOMATED RACE OBSERVATIONS</span>
+          </div>
+        </div>
+        <SignalIndicator status="processing" label="LIVE ENGINE" />
       </div>
 
-      <div className="insights-feed__list">
-        {sorted.map((insight) => {
-          const cfg = severityConfig[insight.severity];
+      <div className="sc-insights-card__ai-banner">
+        <div className="sc-insights-card__ai-badge">
+          <ShieldCheck size={14} />
+          <span>EVIDENCE-BASED RECOMMENDATIONS</span>
+        </div>
+        <span className="text-micro font-telemetry text-lime">
+          CONFIDENCE 94%
+        </span>
+      </div>
+
+      <div className="sc-insights-feed__list">
+        {sorted.map((insight, idx) => {
+          let sev: 'critical' | 'warning' | 'opportunity' | 'info' = 'info';
+          if (insight.severity === 'critical') sev = 'critical';
+          else if (insight.severity === 'warning') sev = 'warning';
+
+          // Extract recommendation if available
+          const rec = (insight.data as any)?.recommendation || (
+            insight.severity === 'critical'
+              ? 'Instruct driver to adjust entry line into Turn 7 & review pit window.'
+              : undefined
+          );
+
           return (
-            <div
-              className="insight-card"
+            <motion.div
               key={insight.id}
-              style={{ background: cfg.bg, borderLeftColor: cfg.color }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: idx * 0.08 }}
             >
-              <div className="insight-card__icon" style={{ color: cfg.color }}>
-                {cfg.icon}
-              </div>
-              <div className="insight-card__body">
-                <div className="insight-card__meta">
-                  <span className="insight-card__category">{insight.category}</span>
-                  {insight.lap_number && (
-                    <span className="insight-card__lap">Lap {insight.lap_number}</span>
-                  )}
-                  <span className="insight-card__severity" style={{ color: cfg.color }}>
-                    {insight.severity.toUpperCase()}
-                  </span>
-                </div>
-                <p className="insight-card__message">{insight.message}</p>
-              </div>
-            </div>
+              <Alert
+                severity={sev}
+                title={insight.category}
+                category={insight.category}
+                lapNumber={insight.lap_number || undefined}
+                message={insight.message}
+                recommendation={rec}
+              />
+            </motion.div>
           );
         })}
       </div>

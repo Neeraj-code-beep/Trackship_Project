@@ -1,0 +1,49 @@
+.sc-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-surface-interactive) 25%,
+    var(--color-bg-surface-elevated) 50%,
+    var(--color-bg-surface-interactive) 75%
+  );
+  background-size: 200% 100%;
+  animation: sc-skeleton-shimmer 1.5s infinite;
+}
+
+@keyframes sc-skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.sc-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-40) var(--space-20);
+  text-align: center;
+  background-color: var(--color-bg-surface);
+  border: 1px dashed var(--color-border-default);
+  border-radius: var(--radius-lg);
+  gap: var(--space-8);
+}
+
+.sc-empty-state__icon {
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-4);
+  opacity: 0.7;
+}
+
+.sc-empty-state__title {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.sc-empty-state__description {
+  margin: 0;
+  color: var(--color-text-muted);
+  max-width: 400px;
+}
+
+.sc-empty-state__action {
+  margin-top: var(--space-12);
+}

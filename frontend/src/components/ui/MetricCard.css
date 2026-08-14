@@ -1,0 +1,100 @@
+.sc-metric-card {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-16) var(--space-20);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  transition: transform var(--motion-fast), border-color var(--motion-fast), box-shadow var(--motion-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.sc-metric-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-border-default);
+  box-shadow: var(--shadow-sm);
+}
+
+.sc-metric-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sc-metric-card__label {
+  color: var(--color-text-muted);
+}
+
+.sc-metric-card__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-surface-interactive);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+}
+
+.sc-metric-card__body {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.sc-metric-card__value-group {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+}
+
+.sc-metric-card__value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  line-height: 1.1;
+}
+
+.sc-metric-card__unit {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.sc-metric-card__delta {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.sc-metric-card__delta--positive {
+  color: var(--color-brand-lime);
+  background-color: rgba(200, 255, 61, 0.1);
+}
+
+.sc-metric-card__delta--negative {
+  color: var(--color-driver-stressed);
+  background-color: rgba(255, 98, 98, 0.1);
+}
+
+.sc-metric-card__delta--neutral {
+  color: var(--color-text-secondary);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sc-metric-card__subtext {
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* Accents */
+.sc-metric-card--accent-lime .sc-metric-card__icon { color: var(--color-brand-lime); }
+.sc-metric-card--accent-violet .sc-metric-card__icon { color: var(--color-ai-violet); }
+.sc-metric-card--accent-blue .sc-metric-card__icon { color: var(--color-telemetry-blue); }
+.sc-metric-card--accent-calm .sc-metric-card__icon { color: var(--color-driver-calm); }
+.sc-metric-card--accent-fatigue .sc-metric-card__icon { color: var(--color-driver-fatigue); }
+.sc-metric-card--accent-stressed .sc-metric-card__icon { color: var(--color-driver-stressed); }

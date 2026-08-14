@@ -1,0 +1,147 @@
+.sc-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--motion-fast);
+  user-select: none;
+  white-space: nowrap;
+  outline: none;
+}
+
+.sc-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ── Sizes ───────────────────────────────────────────────────────── */
+.sc-button--sm {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  height: 32px;
+}
+
+.sc-button--md {
+  padding: 8px 18px;
+  font-size: 0.875rem;
+  height: 40px;
+}
+
+.sc-button--lg {
+  padding: 12px 24px;
+  font-size: 1rem;
+  height: 48px;
+}
+
+/* ── Variants ────────────────────────────────────────────────────── */
+
+/* Primary — Performance Lime Accent */
+.sc-button--primary {
+  background-color: var(--color-brand-lime);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-sm);
+}
+
+.sc-button--primary:hover:not(:disabled) {
+  background-color: #d6ff66;
+  box-shadow: var(--shadow-lime);
+  transform: translateY(-1px);
+}
+
+.sc-button--primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Secondary — Surface Interactive with Subtle Border */
+.sc-button--secondary {
+  background-color: var(--color-bg-surface-interactive);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-default);
+}
+
+.sc-button--secondary:hover:not(:disabled) {
+  background-color: var(--color-bg-surface-elevated);
+  border-color: var(--color-border-strong);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* Ghost — Transparent with Border Hover */
+.sc-button--ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.sc-button--ghost:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-primary);
+}
+
+/* Danger — Alert / Red */
+.sc-button--danger {
+  background-color: rgba(255, 63, 70, 0.15);
+  color: var(--color-driver-critical);
+  border-color: rgba(255, 63, 70, 0.3);
+}
+
+.sc-button--danger:hover:not(:disabled) {
+  background-color: var(--color-driver-critical);
+  color: #fff;
+}
+
+/* Icon Button */
+.sc-button--icon {
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-surface-interactive);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-default);
+}
+
+.sc-button--icon.sc-button--sm {
+  width: 32px;
+  height: 32px;
+}
+
+.sc-button--icon.sc-button--lg {
+  width: 48px;
+  height: 48px;
+}
+
+.sc-button--icon:hover:not(:disabled) {
+  color: var(--color-text-primary);
+  border-color: var(--color-border-strong);
+}
+
+/* Pill Button */
+.sc-button--pill {
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg-surface-interactive);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-default);
+  padding: 6px 16px;
+}
+
+.sc-button--pill:hover:not(:disabled) {
+  border-color: var(--color-brand-lime);
+  color: var(--color-brand-lime);
+}
+
+/* Spinner Animation */
+.sc-button__spinner {
+  animation: sc-spin 1s linear infinite;
+}
+
+@keyframes sc-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

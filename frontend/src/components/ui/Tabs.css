@@ -1,0 +1,50 @@
+.sc-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  background-color: var(--color-bg-surface-interactive);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+  width: fit-content;
+}
+
+.sc-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--motion-fast);
+  white-space: nowrap;
+}
+
+.sc-tab:hover:not(.sc-tab--active) {
+  color: var(--color-text-primary);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.sc-tab--active {
+  background-color: var(--color-bg-surface-elevated);
+  color: var(--color-brand-lime);
+  box-shadow: var(--shadow-sm);
+}
+
+.sc-tab__badge {
+  font-size: 0.6875rem;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-secondary);
+}
+
+.sc-tab__badge--active {
+  background-color: rgba(200, 255, 61, 0.15);
+  color: var(--color-brand-lime);
+}

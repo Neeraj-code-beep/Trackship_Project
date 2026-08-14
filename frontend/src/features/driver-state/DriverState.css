@@ -1,81 +1,123 @@
-.driver-state-card {
-  border-radius: 16px;
-  padding: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(8px);
+.sc-driver-card {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-20);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  box-shadow: var(--shadow-sm);
 }
 
-.driver-state-card__header {
+.sc-driver-card__header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  justify-content: space-between;
 }
 
-.driver-state-card__icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+.sc-driver-card__title-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+}
+
+.sc-driver-card__header-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-xs);
+  background-color: var(--color-bg-surface-interactive);
+  border: 1px solid var(--color-border-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.05);
 }
 
-.driver-state-card__title {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.5);
-  margin: 0;
-  font-weight: 500;
-}
-
-.driver-state-card__dominant {
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-.driver-state-card__time {
-  margin-left: auto;
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.05);
+.sc-driver-card__latency {
+  color: var(--color-text-muted);
+  background-color: var(--color-bg-surface-interactive);
   padding: 3px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-border-subtle);
 }
 
-.driver-state-card__metrics {
+.sc-driver-card__hero {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.metric__header {
-  display: flex;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 4px;
-}
-
-.metric__label {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.55);
-  font-weight: 500;
-}
-
-.metric__value {
-  font-size: 0.75rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.metric__bar {
-  height: 5px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 3px;
+  padding: var(--space-16) var(--space-20);
+  border-radius: var(--radius-lg);
+  border: 1px solid;
+  position: relative;
   overflow: hidden;
 }
 
-.metric__bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+.sc-driver-card__dominant-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
 }
+
+.sc-driver-card__icon-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-surface-interactive);
+  border: 1px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sc-driver-card__dominant-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sc-driver-card__dominant-title {
+  margin: 0;
+  line-height: 1.1;
+}
+
+.sc-driver-card__dominant-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.sc-driver-card__pct-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.sc-driver-card__pct-val {
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.sc-driver-card__spectrum {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.sc-driver-card__spectrum-header {
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.sc-driver-card__bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sc-driver-card__bar-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+

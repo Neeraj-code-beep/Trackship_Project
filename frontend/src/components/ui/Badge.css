@@ -1,0 +1,73 @@
+.sc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.sc-badge__icon {
+  display: flex;
+  align-items: center;
+}
+
+/* ── Variants ────────────────────────────────────────────────────── */
+
+.sc-badge--default {
+  background-color: var(--color-bg-surface-interactive);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-subtle);
+}
+
+.sc-badge--lime {
+  background-color: rgba(200, 255, 61, 0.12);
+  color: var(--color-brand-lime);
+  border-color: rgba(200, 255, 61, 0.25);
+}
+
+.sc-badge--violet {
+  background-color: rgba(139, 108, 255, 0.12);
+  color: var(--color-ai-violet);
+  border-color: rgba(139, 108, 255, 0.25);
+}
+
+.sc-badge--blue {
+  background-color: rgba(85, 184, 255, 0.12);
+  color: var(--color-telemetry-blue);
+  border-color: rgba(85, 184, 255, 0.25);
+}
+
+.sc-badge--calm {
+  background-color: rgba(69, 212, 131, 0.12);
+  color: var(--color-driver-calm);
+  border-color: rgba(69, 212, 131, 0.25);
+}
+
+.sc-badge--neutral {
+  background-color: rgba(110, 168, 255, 0.12);
+  color: var(--color-driver-neutral);
+  border-color: rgba(110, 168, 255, 0.25);
+}
+
+.sc-badge--fatigue {
+  background-color: rgba(255, 184, 77, 0.12);
+  color: var(--color-driver-fatigue);
+  border-color: rgba(255, 184, 77, 0.25);
+}
+
+.sc-badge--stressed {
+  background-color: rgba(255, 98, 98, 0.12);
+  color: var(--color-driver-stressed);
+  border-color: rgba(255, 98, 98, 0.25);
+}
+
+.sc-badge--critical {
+  background-color: rgba(255, 63, 70, 0.15);
+  color: var(--color-driver-critical);
+  border-color: rgba(255, 63, 70, 0.35);
+}

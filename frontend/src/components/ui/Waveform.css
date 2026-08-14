@@ -1,0 +1,45 @@
+.sc-waveform {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+}
+
+.sc-waveform__bar {
+  flex: 1;
+  background-color: var(--color-border-strong);
+  border-radius: var(--radius-full);
+  min-height: 4px;
+  transition: height var(--motion-standard), background-color var(--motion-fast);
+}
+
+/* Active Audio Animated State */
+.sc-waveform--active .sc-waveform__bar {
+  animation: sc-wave-bounce 1.2s ease-in-out infinite alternate;
+}
+
+.sc-waveform--violet .sc-waveform__bar {
+  background-color: var(--color-brand-lime);
+}
+
+.sc-waveform--lime .sc-waveform__bar {
+  background-color: var(--color-brand-lime);
+  box-shadow: 0 0 8px rgba(200, 255, 61, 0.3);
+}
+
+.sc-waveform--blue .sc-waveform__bar {
+  background-color: var(--color-text-secondary);
+}
+
+.sc-waveform--neutral .sc-waveform__bar {
+  background-color: var(--color-border-strong);
+}
+
+.sc-waveform--stressed .sc-waveform__bar {
+  background-color: var(--color-driver-stressed);
+}
+
+@keyframes sc-wave-bounce {
+  0% { transform: scaleY(0.3); }
+  100% { transform: scaleY(1); }
+}

@@ -1,0 +1,89 @@
+/* ==========================================================================
+   SILENT CO-DRIVER — DESIGN SYSTEM TOKENS (SINGLE SOURCE OF TRUTH)
+   Single source of truth for colors, typography, spacing, radius & elevation.
+   ========================================================================== */
+
+:root {
+  /* ── 1. Color Palette: Backgrounds & Layered Surfaces ───────────────── */
+  --color-bg-app: #050608;               /* Level 0: Deep Obsidian Void Base */
+  --color-bg-surface: #0B0E12;           /* Level 1: Primary Precision Cards */
+  --color-bg-surface-elevated: #12161C;  /* Level 2: Nested Telemetry Panels */
+  --color-bg-surface-interactive: #192028;/* Level 3: Controls, Active Items & Hover */
+  --color-bg-surface-glass: rgba(11, 14, 18, 0.82);
+  --color-bg-subtle-glow: rgba(200, 255, 61, 0.03);
+
+  /* ── 2. Color Palette: Precision Metallic Borders ────────────────────── */
+  --color-border-subtle: rgba(255, 255, 255, 0.07);
+  --color-border-default: rgba(255, 255, 255, 0.12);
+  --color-border-strong: rgba(255, 255, 255, 0.22);
+  --color-border-focus: #C8FF3D;
+  --color-border-lime-glow: rgba(200, 255, 61, 0.35);
+
+  /* ── 3. Color Palette: Typography ────────────────────────────────────── */
+  --color-text-primary: #F7F7F5;         /* Warm Off-White Headings & Hero Values */
+  --color-text-secondary: #A1A8B6;       /* Muted Metallic Subtitles & Body Text */
+  --color-text-muted: #5C6370;           /* Micro Meta & Grid Annotations */
+  --color-text-disabled: #353B45;        /* Disabled Controls */
+  --color-text-inverse: #050608;         /* Dark Text on Acid Lime Accent */
+
+  /* ── 4. Singular Primary Brand Accent ────────────────────────────────── */
+  --color-brand-lime: #C8FF3D;          /* Performance Acid Lime Accent */
+  --color-brand-lime-hover: #D6FF66;    /* Hover Accent */
+  --color-brand-lime-subtle: rgba(200, 255, 61, 0.08);
+
+  /* ── 5. Semantic Driver & System Data States (Semantic ONLY) ──────────── */
+  --color-driver-calm: #45D483;         /* Calm Baseline Driver State */
+  --color-driver-neutral: #A1A8B6;       /* Neutral Baseline State */
+  --color-driver-fatigue: #FFB84D;      /* Fatigue Index Warning */
+  --color-driver-stressed: #FF5252;     /* Elevated Stress Alert */
+  --color-driver-critical: #FF3F46;     /* Severe Emergency Stress */
+
+  /* ── 6. Spacing Scale (8px Base Rhythm) ──────────────────────────────── */
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+  --space-64: 64px;
+  --space-80: 80px;
+  --space-96: 96px;
+  --space-120: 120px;
+
+  /* ── 7. Border Radius Scale ─────────────────────────────────────────── */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* ── 8. Elevation & Ambient Glows ────────────────────────────────────── */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.85);
+  --shadow-lime: 0 0 24px rgba(200, 255, 61, 0.2);
+
+  /* ── 9. Motion & Animation Tokens ────────────────────────────────────── */
+  --motion-fast: 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-standard: 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-emphasis: 450ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── 10. Z-Index Scale ──────────────────────────────────────────────── */
+  --z-base: 0;
+  --z-card: 1;
+  --z-sticky: 10;
+  --z-header: 100;
+  --z-overlay: 500;
+  --z-modal: 1000;
+  --z-tooltip: 2000;
+
+  /* ── 11. Legacy Token Aliases (mapped to approved palette) ────────── */
+  --color-ai-violet: var(--color-brand-lime);
+  --color-telemetry-blue: var(--color-text-secondary);
+}
