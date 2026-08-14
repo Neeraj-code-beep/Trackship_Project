@@ -1,0 +1,126 @@
+.insights-feed {
+  border-radius: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.insights-feed::-webkit-scrollbar {
+  width: 4px;
+}
+
+.insights-feed::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.insights-feed--empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.insights-feed__empty-icon {
+  opacity: 0.3;
+}
+
+.insights-feed__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.insights-feed__header h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.insights-feed__count {
+  margin-left: auto;
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.insights-feed__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.insight-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border-left: 3px solid;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.insight-card:hover {
+  transform: translateX(2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.insight-card__icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.insight-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.insight-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.insight-card__category {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.insight-card__lap {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.insight-card__severity {
+  margin-left: auto;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+}
+
+.insight-card__message {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
+  line-height: 1.45;
+}
