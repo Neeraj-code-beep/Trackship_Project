@@ -1,32 +1,33 @@
-import os
+"""Application configuration loaded from environment variables."""
+
 from pathlib import Path
-from pydantic_settings import BaseSettings
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Silent Co-Driver"
     API_V1_STR: str = "/api/v1"
-    
-    # Base paths
+
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
     UPLOAD_DIR: Path = BASE_DIR / "data" / "uploads"
-    
-    # Audio Validation Settings
-    MAX_AUDIO_SIZE_BYTES: int = 50 * 1024 * 1024  # 50 MB
-    ALLOWED_EXTENSIONS: set = {".wav", ".mp3", ".m4a", ".flac"}
-    ALLOWED_MIME_TYPES: set = {
-        "audio/wav", "audio/x-wav", 
-        "audio/mpeg", "audio/mp3", 
-        "audio/m4a", "audio/x-m4a", "audio/mp4",
-        "audio/flac", "audio/x-flac"
-    }
-    MIN_DURATION_SECONDS: float = 0.5
-    MAX_DURATION_SECONDS: float = 600.0  # 10 minutes
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    PROCESSED_DIR: Path = BASE_DIR / "data" / "processed"
+
+    MAX_UPLOAD_SIZE_MB: float = 50.0
+    MIN_AUDIO_DURATION_SECONDS: float = 0.5
+    MAX_AUDIO_DURATION_SECONDS: float = 600.0
+    ALLOWED_EXTENSIONS: set[str] = {".wav", ".mp3", ".m4a", ".flac"}
+
+    model_config = SettingsConfigDict(
+        env_file=BASE_DIR / ".env",
+        case_sensitive=True,
+        extra="ignore",
+    )
+
+    @property
+    def max_upload_size_bytes(self) -> int:
+        """Configured upload limit converted to bytes."""
+        return int(self.MAX_UPLOAD_SIZE_MB * 1024 * 1024)
+
 
 settings = Settings()
-
-# Ensure uploads directory exists
-settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
