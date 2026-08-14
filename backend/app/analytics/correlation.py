@@ -1,137 +1,181 @@
-"""
-Correlation module.
-Maps driver stress/fatigue levels against lap performance deviations.
-"""
+"""Safe association metrics between driver-state scores and lap deltas."""
 
 from __future__ import annotations
 
 import math
-from typing import Optional
 
-from backend.app.schemas.schemas import AlignedLapEmotion
+from backend.app.schemas.schemas import (
+    AlignedLapEmotion,
+    CorrelationResult,
+    FatigueTrend,
+)
+
+MIN_CORRELATION_SAMPLES = 3
+FATIGUE_TREND_THRESHOLD = 10.0
 
 
 def compute_stress_pace_correlation(
     aligned_laps: list[AlignedLapEmotion],
-) -> float:
-    """
-    Compute Pearson correlation between stress levels and lap time deltas.
-    
-    Returns:
-        Correlation coefficient in [-1.0, 1.0]. Positive means higher stress
-        correlates with slower laps. Returns 0.0 if insufficient data.
-    """
-    if len(aligned_laps) < 3:
-        return 0.0
-
-    stress = [lap.stress_level for lap in aligned_laps]
-    deltas = [lap.delta_to_best for lap in aligned_laps]
-
-    return _pearson(stress, deltas)
+) -> CorrelationResult:
+    """Associate stress score with signed median-baseline lap delta."""
+    return _correlation_result(
+        "stress_vs_lap_delta",
+        aligned_laps,
+        score_attribute="stress_score",
+    )
 
 
 def compute_fatigue_pace_correlation(
     aligned_laps: list[AlignedLapEmotion],
-) -> float:
-    """
-    Compute Pearson correlation between fatigue levels and lap time deltas.
-    """
-    if len(aligned_laps) < 3:
-        return 0.0
+) -> CorrelationResult:
+    """Associate estimated fatigue score with signed median-baseline lap delta."""
+    return _correlation_result(
+        "fatigue_vs_lap_delta",
+        aligned_laps,
+        score_attribute="fatigue_score",
+    )
 
-    fatigue = [lap.fatigue_level for lap in aligned_laps]
-    deltas = [lap.delta_to_best for lap in aligned_laps]
 
-    return _pearson(fatigue, deltas)
+def compute_stint_fatigue_trend(
+    aligned_laps: list[AlignedLapEmotion],
+) -> FatigueTrend:
+    """Compare early and late usable laps without physiological claims."""
+    usable = [lap for lap in aligned_laps if _is_usable(lap, "fatigue_score")]
+    if len(usable) < MIN_CORRELATION_SAMPLES:
+        return FatigueTrend(
+            trend="insufficient_data",
+            sample_size=len(usable),
+            reason="insufficient_data",
+        )
+
+    half = max(1, len(usable) // 2)
+    early = usable[:half]
+    late = usable[-half:]
+    early_average = sum(lap.fatigue_score for lap in early) / len(early)
+    late_average = sum(lap.fatigue_score for lap in late) / len(late)
+    change = late_average - early_average
+    if change >= FATIGUE_TREND_THRESHOLD:
+        trend = "rising"
+    elif change <= -FATIGUE_TREND_THRESHOLD:
+        trend = "falling"
+    else:
+        trend = "stable"
+    return FatigueTrend(
+        trend=trend,
+        change=round(change, 1),
+        early_average=round(early_average, 1),
+        late_average=round(late_average, 1),
+        sample_size=len(usable),
+    )
 
 
 def detect_performance_anomalies(
     aligned_laps: list[AlignedLapEmotion],
     delta_threshold: float = 1.5,
 ) -> list[dict]:
-    """
-    Detect laps where performance deviated significantly from the best
-    AND emotional state was elevated.
-    
-    Args:
-        aligned_laps: Lap data with emotion alignment
-        delta_threshold: Seconds above best lap to flag as anomaly
-        
-    Returns:
-        List of anomaly dicts with lap number, delta, and emotional state.
-    """
+    """Retain a compatibility helper using median-baseline pace loss."""
     anomalies = []
-
     for lap in aligned_laps:
-        if lap.delta_to_best >= delta_threshold:
-            anomalies.append({
-                "lap_number": lap.lap_number,
-                "delta_to_best": lap.delta_to_best,
-                "dominant_emotion": lap.dominant_emotion.value,
-                "stress_level": lap.stress_level,
-                "fatigue_level": lap.fatigue_level,
-                "severity": (
-                    "critical" if lap.delta_to_best >= delta_threshold * 2
-                    else "warning"
-                ),
-            })
-
+        if lap.lap_delta >= delta_threshold and not lap.is_timing_outlier:
+            anomalies.append(
+                {
+                    "lap_number": lap.lap_number,
+                    "lap_delta": lap.lap_delta,
+                    "delta_to_best": lap.delta_to_best,
+                    "dominant_emotion": lap.dominant_emotion.value,
+                    "stress_score": lap.stress_score,
+                    "fatigue_score": lap.fatigue_score,
+                    "stress_level": lap.stress_level,
+                    "fatigue_level": lap.fatigue_level,
+                    "severity": "critical" if lap.lap_delta >= delta_threshold * 2 else "warning",
+                }
+            )
     return anomalies
 
 
-def compute_stint_fatigue_trend(
+def _correlation_result(
+    metric: str,
     aligned_laps: list[AlignedLapEmotion],
-    window: int = 3,
-) -> list[dict]:
-    """
-    Compute a rolling fatigue trend across laps to detect progressive
-    driver tiredness within a stint.
-    
-    Returns:
-        List of dicts with lap range, average fatigue, and trend direction.
-    """
-    if len(aligned_laps) < window:
-        return []
+    *,
+    score_attribute: str,
+) -> CorrelationResult:
+    usable = [lap for lap in aligned_laps if _is_usable(lap, score_attribute)]
+    usable_ids = {id(lap) for lap in usable}
+    excluded = [lap.lap_number for lap in aligned_laps if id(lap) not in usable_ids]
+    if len(usable) < MIN_CORRELATION_SAMPLES:
+        return CorrelationResult(
+            metric=metric,
+            pearson_r=None,
+            sample_size=len(usable),
+            direction="none",
+            strength="unknown",
+            reason="insufficient_data",
+            excluded_lap_numbers=excluded,
+        )
 
-    trends = []
-    for i in range(len(aligned_laps) - window + 1):
-        window_laps = aligned_laps[i : i + window]
-        avg_fatigue = sum(l.fatigue_level for l in window_laps) / window
-        avg_delta = sum(l.delta_to_best for l in window_laps) / window
+    scores = [float(getattr(lap, score_attribute)) for lap in usable]
+    deltas = [float(lap.lap_delta) for lap in usable]
+    coefficient = _pearson(scores, deltas)
+    if coefficient is None:
+        return CorrelationResult(
+            metric=metric,
+            pearson_r=None,
+            sample_size=len(usable),
+            direction="none",
+            strength="unknown",
+            reason="zero_variance",
+            excluded_lap_numbers=excluded,
+        )
 
-        # Determine trend by comparing first and last in window
-        if window_laps[-1].fatigue_level > window_laps[0].fatigue_level + 0.05:
-            direction = "increasing"
-        elif window_laps[-1].fatigue_level < window_laps[0].fatigue_level - 0.05:
-            direction = "decreasing"
-        else:
-            direction = "stable"
-
-        trends.append({
-            "lap_start": window_laps[0].lap_number,
-            "lap_end": window_laps[-1].lap_number,
-            "avg_fatigue": round(avg_fatigue, 4),
-            "avg_delta": round(avg_delta, 3),
-            "trend": direction,
-        })
-
-    return trends
+    direction, strength = interpret_correlation(coefficient)
+    return CorrelationResult(
+        metric=metric,
+        pearson_r=coefficient,
+        sample_size=len(usable),
+        direction=direction,
+        strength=strength,
+        excluded_lap_numbers=excluded,
+    )
 
 
-def _pearson(x: list[float], y: list[float]) -> float:
-    """Compute Pearson correlation coefficient between two lists."""
-    n = len(x)
-    if n != len(y) or n < 2:
-        return 0.0
+def interpret_correlation(coefficient: float) -> tuple[str, str]:
+    """Return machine-readable direction and documented magnitude band."""
+    absolute = abs(coefficient)
+    direction = "none" if absolute < 1e-12 else "positive" if coefficient > 0 else "negative"
+    if absolute < 0.2:
+        strength = "negligible"
+    elif absolute < 0.4:
+        strength = "weak"
+    elif absolute < 0.7:
+        strength = "moderate"
+    else:
+        strength = "strong"
+    return direction, strength
 
-    mean_x = sum(x) / n
-    mean_y = sum(y) / n
 
-    cov = sum((xi - mean_x) * (yi - mean_y) for xi, yi in zip(x, y))
-    std_x = math.sqrt(sum((xi - mean_x) ** 2 for xi in x))
-    std_y = math.sqrt(sum((yi - mean_y) ** 2 for yi in y))
+def _is_usable(lap: AlignedLapEmotion, score_attribute: str) -> bool:
+    score = float(getattr(lap, score_attribute))
+    return (
+        bool(lap.segment_ids)
+        and not lap.is_timing_outlier
+        and math.isfinite(score)
+        and math.isfinite(float(lap.lap_delta))
+    )
 
-    if std_x == 0 or std_y == 0:
-        return 0.0
 
-    return round(cov / (std_x * std_y), 4)
+def _pearson(x: list[float], y: list[float]) -> float | None:
+    if len(x) != len(y) or len(x) < MIN_CORRELATION_SAMPLES:
+        return None
+    mean_x = sum(x) / len(x)
+    mean_y = sum(y) / len(y)
+    centered_x = [value - mean_x for value in x]
+    centered_y = [value - mean_y for value in y]
+    sum_sq_x = sum(value * value for value in centered_x)
+    sum_sq_y = sum(value * value for value in centered_y)
+    if sum_sq_x <= 0 or sum_sq_y <= 0:
+        return None
+    covariance = sum(a * b for a, b in zip(centered_x, centered_y, strict=True))
+    coefficient = covariance / math.sqrt(sum_sq_x * sum_sq_y)
+    if not math.isfinite(coefficient):
+        return None
+    return round(min(max(coefficient, -1.0), 1.0), 4)

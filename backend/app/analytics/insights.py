@@ -5,17 +5,16 @@ Produces automated race-engineering observations from correlated data.
 
 from __future__ import annotations
 
+from backend.app.analytics.correlation import (
+    compute_fatigue_pace_correlation,
+    compute_stint_fatigue_trend,
+    compute_stress_pace_correlation,
+    detect_performance_anomalies,
+)
 from backend.app.schemas.schemas import (
     AlignedLapEmotion,
     InsightItem,
     InsightSeverity,
-    EmotionLabel,
-)
-from backend.app.analytics.correlation import (
-    compute_stress_pace_correlation,
-    compute_fatigue_pace_correlation,
-    detect_performance_anomalies,
-    compute_stint_fatigue_trend,
 )
 
 
@@ -39,57 +38,59 @@ def generate_insights(
         return insights
 
     # ── 1. Stress-Pace Correlation ────────────────────────────────────────
-    stress_corr = compute_stress_pace_correlation(aligned_laps)
-    if stress_corr > 0.5:
+    stress_result = compute_stress_pace_correlation(aligned_laps)
+    stress_corr = stress_result.pearson_r
+    if stress_corr is not None and stress_corr > 0.5:
         insights.append(
             InsightItem(
                 severity=InsightSeverity.WARNING,
                 category="Stress-Performance",
                 message=(
                     f"Strong positive correlation ({stress_corr:.2f}) between driver stress "
-                    f"and lap time degradation. Consider radio encouragement or strategy change."
+                    f"and lap time degradation; this is an association, not causation."
                 ),
-                data={"correlation": stress_corr},
+                data=stress_result.model_dump(),
             )
         )
-    elif stress_corr > 0.25:
+    elif stress_corr is not None and stress_corr > 0.25:
         insights.append(
             InsightItem(
                 severity=InsightSeverity.INFO,
                 category="Stress-Performance",
                 message=(
                     f"Moderate stress-pace correlation ({stress_corr:.2f}) detected. "
-                    f"Driver performance slightly impacted under stress."
+                    f"Review the concurrent signals without assuming causation."
                 ),
-                data={"correlation": stress_corr},
+                data=stress_result.model_dump(),
             )
         )
 
     # ── 2. Fatigue-Pace Correlation ───────────────────────────────────────
-    fatigue_corr = compute_fatigue_pace_correlation(aligned_laps)
-    if fatigue_corr > 0.5:
+    fatigue_result = compute_fatigue_pace_correlation(aligned_laps)
+    fatigue_corr = fatigue_result.pearson_r
+    if fatigue_corr is not None and fatigue_corr > 0.5:
         insights.append(
             InsightItem(
                 severity=InsightSeverity.CRITICAL,
                 category="Fatigue-Performance",
                 message=(
                     f"High fatigue-pace correlation ({fatigue_corr:.2f}). "
-                    f"Driver tiredness is significantly impacting lap times. "
-                    f"Recommend pit stop or safety car period to recover."
+                    f"Estimated fatigue-related vocal signals and slower laps moved together. "
+                    f"Review the concurrent stint data."
                 ),
-                data={"correlation": fatigue_corr},
+                data=fatigue_result.model_dump(),
             )
         )
-    elif fatigue_corr > 0.25:
+    elif fatigue_corr is not None and fatigue_corr > 0.25:
         insights.append(
             InsightItem(
                 severity=InsightSeverity.WARNING,
                 category="Fatigue-Performance",
                 message=(
                     f"Moderate fatigue-pace correlation ({fatigue_corr:.2f}). "
-                    f"Monitor driver tiredness closely."
+                    f"Monitor the estimated vocal pattern alongside pace."
                 ),
-                data={"correlation": fatigue_corr},
+                data=fatigue_result.model_dump(),
             )
         )
 
@@ -108,7 +109,8 @@ def generate_insights(
                 message=(
                     f"Lap {anomaly['lap_number']}: +{anomaly['delta_to_best']:.3f}s off best pace. "
                     f"Driver was {anomaly['dominant_emotion']} "
-                    f"(stress={anomaly['stress_level']:.0%}, fatigue={anomaly['fatigue_level']:.0%})."
+                    f"(stress={anomaly['stress_level']:.0%}, "
+                    f"fatigue={anomaly['fatigue_level']:.0%})."
                 ),
                 lap_number=anomaly["lap_number"],
                 data=anomaly,
@@ -116,27 +118,22 @@ def generate_insights(
         )
 
     # ── 4. Stint Fatigue Trend ────────────────────────────────────────────
-    trends = compute_stint_fatigue_trend(aligned_laps, window=3)
-    increasing_trends = [t for t in trends if t["trend"] == "increasing"]
-    if increasing_trends:
-        last_trend = increasing_trends[-1]
+    fatigue_trend = compute_stint_fatigue_trend(aligned_laps)
+    if fatigue_trend.trend == "rising":
         insights.append(
             InsightItem(
                 severity=InsightSeverity.WARNING,
                 category="Fatigue Trend",
                 message=(
-                    f"Rising fatigue trend detected from Lap {last_trend['lap_start']} "
-                    f"to Lap {last_trend['lap_end']} "
-                    f"(avg fatigue: {last_trend['avg_fatigue']:.0%}). "
-                    f"Pace degrading by +{last_trend['avg_delta']:.3f}s average."
+                    "Estimated fatigue-related vocal signals increased from the early "
+                    f"to late session sample by {fatigue_trend.change:.1f} points."
                 ),
-                lap_number=last_trend["lap_end"],
-                data=last_trend,
+                data=fatigue_trend.model_dump(),
             )
         )
 
     # ── 5. Best Lap Emotion ───────────────────────────────────────────────
-    best_lap = min(aligned_laps, key=lambda l: l.lap_time_seconds)
+    best_lap = min(aligned_laps, key=lambda lap: lap.lap_time_seconds)
     insights.append(
         InsightItem(
             severity=InsightSeverity.INFO,
@@ -151,8 +148,8 @@ def generate_insights(
     )
 
     # ── 6. Overall stress summary ─────────────────────────────────────────
-    avg_stress = sum(l.stress_level for l in aligned_laps) / len(aligned_laps)
-    avg_fatigue = sum(l.fatigue_level for l in aligned_laps) / len(aligned_laps)
+    avg_stress = sum(lap.stress_level for lap in aligned_laps) / len(aligned_laps)
+    avg_fatigue = sum(lap.fatigue_level for lap in aligned_laps) / len(aligned_laps)
 
     if avg_stress > 0.5:
         insights.append(
@@ -165,7 +162,7 @@ def generate_insights(
                 ),
             )
         )
-    
+
     if avg_fatigue > 0.3:
         insights.append(
             InsightItem(

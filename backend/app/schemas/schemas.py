@@ -184,6 +184,25 @@ class AlignedLapEmotion(BaseModel):
     segment_ids: list[str] = Field(default_factory=list)
 
 
+class CorrelationResult(BaseModel):
+    metric: str
+    pearson_r: float | None = Field(default=None, ge=-1.0, le=1.0)
+    sample_size: int = Field(ge=0)
+    direction: str
+    strength: str
+    reason: str | None = None
+    excluded_lap_numbers: list[int] = Field(default_factory=list)
+
+
+class FatigueTrend(BaseModel):
+    trend: str
+    change: float | None = None
+    early_average: float | None = Field(default=None, ge=0.0, le=100.0)
+    late_average: float | None = Field(default=None, ge=0.0, le=100.0)
+    sample_size: int = Field(ge=0)
+    reason: str | None = None
+
+
 class InsightItem(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     severity: InsightSeverity
