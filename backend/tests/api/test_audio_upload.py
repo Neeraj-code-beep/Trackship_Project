@@ -18,6 +18,7 @@ def test_audio_upload_accepts_valid_wav(tmp_path, monkeypatch, wav_bytes_factory
     body = response.json()
     assert body["format"] == "wav"
     assert body["duration_seconds"] == 1.0
+    assert body["storage_path"] == f"data/uploads/{body['file_id']}.wav"
     assert (tmp_path / f"{body['file_id']}.wav").exists()
 
 

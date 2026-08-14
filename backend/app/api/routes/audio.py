@@ -46,5 +46,5 @@ async def upload_audio(file: Annotated[UploadFile, File(...)]):
         duration_seconds=meta.duration_seconds if meta.duration_seconds > 0 else None,
         sample_rate=meta.sample_rate if meta.sample_rate > 0 else None,
         format=ext.lstrip("."),
-        storage_path=str(storage_path),
+        storage_path=f"data/uploads/{storage_path.name}",
     )

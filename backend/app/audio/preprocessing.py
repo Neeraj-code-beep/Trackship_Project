@@ -1,191 +1,166 @@
-"""
-Audio preprocessing module.
-Handles safe temporary file storage, normalization, and feature extraction.
-"""
+"""Safe persistence and reusable preprocessing for driver-radio audio."""
 
 from __future__ import annotations
 
-import os
-import uuid
-import struct
-import wave
 import io
 import math
-import tempfile
+import uuid
+import wave
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
+import numpy as np
+from backend.app.audio.decoder import decode_audio
+from backend.app.audio.validation import validate_extension
 from backend.app.core.config import settings
-from backend.app.audio.validation import AudioMetadata
+from scipy.signal import resample_poly
+
+MODEL_SAMPLE_RATE = 16_000
+SILENCE_RMS_THRESHOLD = 1e-4
+
+
+@dataclass(frozen=True)
+class PreprocessedAudio:
+    """Original-amplitude audio plus a separate speech-model representation."""
+
+    raw_waveform: np.ndarray
+    raw_sample_rate: int
+    model_waveform: np.ndarray
+    model_sample_rate: int
+    duration_seconds: float
+    is_silent: bool
+    normalization_gain: float
+
+
+def _runtime_directory(path: Path) -> Path:
+    directory = path.resolve()
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
 
 
 def save_upload(data: bytes, original_filename: str) -> tuple[str, Path]:
-    """
-    Save uploaded audio data to the uploads directory with a unique ID.
-    Returns (file_id, storage_path).
-    """
-    file_id = str(uuid.uuid4())
-    ext = Path(original_filename).suffix.lower()
-    safe_name = f"{file_id}{ext}"
-    storage_path = settings.UPLOAD_DIR / safe_name
-    storage_path.write_bytes(data)
-    return file_id, storage_path
+    """Persist original bytes under a server-generated UUID filename."""
+    ext = validate_extension(original_filename)
+    upload_dir = _runtime_directory(settings.UPLOAD_DIR)
 
-
-def compute_rms_energy(data: bytes, ext: str) -> float:
-    """
-    Compute RMS energy of an audio file.
-    Currently supports WAV files natively; returns estimate for others.
-    """
-    if ext == ".wav":
+    for _ in range(3):
+        file_id = str(uuid.uuid4())
+        storage_path = (upload_dir / f"{file_id}{ext}").resolve()
+        if storage_path.parent != upload_dir:
+            raise RuntimeError("Resolved upload path escaped the upload directory.")
         try:
-            buf = io.BytesIO(data)
-            with wave.open(buf, "rb") as wf:
-                n_frames = wf.getnframes()
-                if n_frames == 0:
-                    return 0.0
-                sample_width = wf.getsampwidth()
-                raw_frames = wf.readframes(min(n_frames, 44100 * 5))  # First 5s sample
+            with storage_path.open("xb") as output:
+                output.write(data)
+            return file_id, storage_path
+        except FileExistsError:
+            continue
 
-                if sample_width == 2:
-                    fmt = f"<{len(raw_frames) // 2}h"
-                    samples = struct.unpack(fmt, raw_frames)
-                    max_val = 32768.0
-                elif sample_width == 1:
-                    samples = [b - 128 for b in raw_frames]
-                    max_val = 128.0
-                else:
-                    return 0.5  # fallback
+    raise RuntimeError("Could not allocate a unique upload filename.")
 
-                if not samples:
-                    return 0.0
 
-                sum_sq = sum(s * s for s in samples)
-                rms = math.sqrt(sum_sq / len(samples)) / max_val
-                return min(rms, 1.0)
-        except Exception:
-            return 0.5  # fallback on error
+def preprocess_audio(data: bytes, ext: str) -> PreprocessedAudio:
+    """Decode once, preserve raw intensity, and prepare a normalized 16 kHz copy."""
+    decoded = decode_audio(data, ext)
+    raw = decoded.waveform.astype(np.float32, copy=True)
+    raw_rate = decoded.info.sample_rate
+
+    if raw_rate == MODEL_SAMPLE_RATE:
+        resampled = raw.copy()
     else:
-        # For non-WAV formats, return a reasonable estimate
-        # In production, would use ffmpeg/pydub to decode first
-        return 0.5
+        common_divisor = math.gcd(raw_rate, MODEL_SAMPLE_RATE)
+        resampled = resample_poly(
+            raw,
+            MODEL_SAMPLE_RATE // common_divisor,
+            raw_rate // common_divisor,
+        ).astype(np.float32, copy=False)
+
+    raw_rms = _rms(raw)
+    is_silent = raw_rms < SILENCE_RMS_THRESHOLD
+    peak = float(np.max(np.abs(resampled))) if resampled.size else 0.0
+    if is_silent or peak <= 0.0:
+        gain = 1.0
+        model_waveform = resampled.copy()
+    else:
+        gain = min(0.95 / peak, 20.0)
+        model_waveform = np.clip(resampled * gain, -1.0, 1.0).astype(np.float32)
+
+    return PreprocessedAudio(
+        raw_waveform=raw,
+        raw_sample_rate=raw_rate,
+        model_waveform=model_waveform,
+        model_sample_rate=MODEL_SAMPLE_RATE,
+        duration_seconds=decoded.info.duration_seconds,
+        is_silent=is_silent,
+        normalization_gain=round(gain, 6),
+    )
 
 
-def normalize_audio_data(data: bytes, ext: str) -> bytes:
-    """
-    Basic audio normalization for WAV files.
-    For non-WAV formats, returns data unchanged (would need ffmpeg in production).
-    """
-    if ext != ".wav":
-        return data
+def save_processed_audio(file_id: str, audio: PreprocessedAudio) -> Path:
+    """Persist the model waveform as mono 16-bit PCM WAV in the processed directory."""
+    canonical_id = str(uuid.UUID(file_id))
+    processed_dir = _runtime_directory(settings.PROCESSED_DIR)
+    output_path = (processed_dir / f"{canonical_id}.wav").resolve()
+    if output_path.parent != processed_dir:
+        raise RuntimeError("Resolved processed path escaped the processed directory.")
+    if output_path.exists():
+        return output_path
 
-    try:
-        buf = io.BytesIO(data)
-        with wave.open(buf, "rb") as wf:
-            params = wf.getparams()
-            n_frames = wf.getnframes()
-            if n_frames == 0 or params.sampwidth != 2:
-                return data
-
-            raw = wf.readframes(n_frames)
-            fmt = f"<{len(raw) // 2}h"
-            samples = list(struct.unpack(fmt, raw))
-
-            # Find peak
-            peak = max(abs(s) for s in samples) if samples else 1
-            if peak == 0:
-                return data
-
-            # Normalize to 90% of max to avoid clipping
-            scale = (32767 * 0.9) / peak
-            normalized = [int(s * scale) for s in samples]
-            normalized_raw = struct.pack(f"<{len(normalized)}h", *normalized)
-
-            # Rebuild WAV
-            out = io.BytesIO()
-            with wave.open(out, "wb") as wf_out:
-                wf_out.setparams(params)
-                wf_out.writeframes(normalized_raw)
-            return out.getvalue()
-    except Exception:
-        return data
+    pcm = np.round(np.clip(audio.model_waveform, -1.0, 1.0) * 32767.0).astype("<i2")
+    with output_path.open("xb") as output_file:
+        with wave.open(output_file, "wb") as wav_file:
+            wav_file.setnchannels(1)
+            wav_file.setsampwidth(2)
+            wav_file.setframerate(audio.model_sample_rate)
+            wav_file.writeframes(pcm.tobytes())
+    return output_path
 
 
 def extract_audio_segments(
-    data: bytes, ext: str, segment_duration_seconds: float = 5.0
-) -> list[dict]:
-    """
-    Split audio into fixed-duration segments for analysis.
-    Returns list of dicts with start_time, end_time, and rms_energy.
-    """
-    segments = []
+    data: bytes,
+    ext: str,
+    segment_duration_seconds: float = 5.0,
+) -> list[dict[str, float]]:
+    """Return deterministic fixed windows with RMS measured from real audio."""
+    if segment_duration_seconds <= 0:
+        raise ValueError("segment_duration_seconds must be positive")
 
-    if ext == ".wav":
-        try:
-            buf = io.BytesIO(data)
-            with wave.open(buf, "rb") as wf:
-                sample_rate = wf.getframerate()
-                n_frames = wf.getnframes()
-                sample_width = wf.getsampwidth()
-                total_duration = n_frames / sample_rate if sample_rate > 0 else 0
-                frames_per_segment = int(segment_duration_seconds * sample_rate)
+    audio = preprocess_audio(data, ext)
+    total_samples = audio.raw_waveform.size
+    segment_samples = max(1, round(segment_duration_seconds * audio.raw_sample_rate))
+    segments: list[dict[str, float]] = []
 
-                offset = 0
-                while offset < n_frames:
-                    chunk_frames = min(frames_per_segment, n_frames - offset)
-                    wf.setpos(offset)
-                    raw = wf.readframes(chunk_frames)
-
-                    start_t = offset / sample_rate
-                    end_t = (offset + chunk_frames) / sample_rate
-
-                    # Compute RMS for this segment
-                    if sample_width == 2 and len(raw) >= 2:
-                        fmt = f"<{len(raw) // 2}h"
-                        samples = struct.unpack(fmt, raw)
-                        if samples:
-                            sum_sq = sum(s * s for s in samples)
-                            rms = math.sqrt(sum_sq / len(samples)) / 32768.0
-                        else:
-                            rms = 0.0
-                    else:
-                        rms = 0.5
-
-                    segments.append({
-                        "start_time": round(start_t, 3),
-                        "end_time": round(end_t, 3),
-                        "rms_energy": round(min(rms, 1.0), 4),
-                    })
-                    offset += chunk_frames
-        except Exception:
-            # Fallback: estimate from file size
-            assumed_duration = len(data) / (44100 * 2 * 2)  # 44.1k, 16-bit, stereo
-            n_segs = max(1, int(assumed_duration / segment_duration_seconds))
-            for i in range(n_segs):
-                segments.append({
-                    "start_time": round(i * segment_duration_seconds, 3),
-                    "end_time": round((i + 1) * segment_duration_seconds, 3),
-                    "rms_energy": 0.5,
-                })
-    else:
-        # For non-WAV: rough estimate based on assumed duration
-        assumed_bitrate = 128_000
-        assumed_duration = (len(data) * 8) / assumed_bitrate
-        n_segs = max(1, int(assumed_duration / segment_duration_seconds))
-        for i in range(n_segs):
-            segments.append({
-                "start_time": round(i * segment_duration_seconds, 3),
-                "end_time": round(min((i + 1) * segment_duration_seconds, assumed_duration), 3),
-                "rms_energy": 0.5,
-            })
-
+    for start_sample in range(0, total_samples, segment_samples):
+        end_sample = min(start_sample + segment_samples, total_samples)
+        waveform = audio.raw_waveform[start_sample:end_sample]
+        segments.append(
+            {
+                "start_time": round(start_sample / audio.raw_sample_rate, 3),
+                "end_time": round(end_sample / audio.raw_sample_rate, 3),
+                "rms_energy": round(_rms(waveform), 6),
+            }
+        )
     return segments
 
 
-def cleanup_temp_file(path: Path) -> None:
-    """Safely remove a temporary file if it exists."""
-    try:
-        if path.exists():
-            path.unlink()
-    except OSError:
-        pass
+def compute_rms_energy(data: bytes, ext: str) -> float:
+    """Compute full-clip RMS from decoded, original-amplitude audio."""
+    return _rms(preprocess_audio(data, ext).raw_waveform)
+
+
+def encode_model_wav(audio: PreprocessedAudio) -> bytes:
+    """Encode model-ready audio in memory for libraries that require a WAV payload."""
+    pcm = np.round(np.clip(audio.model_waveform, -1.0, 1.0) * 32767.0).astype("<i2")
+    output = io.BytesIO()
+    with wave.open(output, "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(audio.model_sample_rate)
+        wav_file.writeframes(pcm.tobytes())
+    return output.getvalue()
+
+
+def _rms(waveform: np.ndarray) -> float:
+    if waveform.size == 0:
+        return 0.0
+    value = float(np.sqrt(np.mean(np.square(waveform.astype(np.float64)))))
+    return value if math.isfinite(value) else 0.0

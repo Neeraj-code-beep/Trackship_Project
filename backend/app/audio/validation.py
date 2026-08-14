@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import io
-import math
 from dataclasses import dataclass
 from pathlib import Path
 
+from backend.app.audio.decoder import AudioDecodeError, inspect_audio
 from backend.app.core.config import settings
 from fastapi import UploadFile
 
@@ -43,13 +42,6 @@ _MIME_TYPES_BY_EXTENSION: dict[str, set[str]] = {
     ".mp3": {"audio/mpeg", "audio/mp3"},
     ".m4a": {"audio/m4a", "audio/x-m4a", "audio/mp4"},
     ".flac": {"audio/flac", "audio/x-flac"},
-}
-
-_CONTAINER_NAMES_BY_EXTENSION: dict[str, set[str]] = {
-    ".wav": {"wav"},
-    ".mp3": {"mp3"},
-    ".m4a": {"mov", "mp4", "m4a", "3gp", "3g2", "mj2"},
-    ".flac": {"flac"},
 }
 
 
@@ -92,68 +84,30 @@ def validate_file_size(size_bytes: int) -> None:
 
 
 def _decoded_metadata(data: bytes, ext: str) -> AudioMetadata:
-    """Decode every audio frame and derive metadata from the decoded signal."""
     try:
-        import av
-    except ImportError as exc:  # pragma: no cover - dependency failure is environment-specific
-        raise AudioValidationError(
-            "Audio decoding support is unavailable on the server.",
-            error_code="AUDIO_DECODER_UNAVAILABLE",
-            status_code=503,
-        ) from exc
-
-    try:
-        with av.open(io.BytesIO(data), mode="r") as container:
-            streams = [stream for stream in container.streams if stream.type == "audio"]
-            if not streams:
-                raise ValueError("no audio stream")
-
-            container_names = {name.strip().lower() for name in container.format.name.split(",")}
-            if not container_names.intersection(_CONTAINER_NAMES_BY_EXTENSION[ext]):
-                raise AudioValidationError(
-                    "The file content does not match its audio extension.",
-                    error_code="UNSUPPORTED_AUDIO_FORMAT",
-                )
-
-            stream = streams[0]
-            decoded_duration = 0.0
-            sample_rate = 0
-            channels = 0
-            bit_depth = 0
-            decoded_frames = 0
-
-            for frame in container.decode(stream):
-                frame_rate = int(frame.sample_rate or 0)
-                if frame_rate <= 0 or frame.samples <= 0:
-                    continue
-                decoded_frames += 1
-                sample_rate = sample_rate or frame_rate
-                channels = channels or len(frame.layout.channels)
-                bit_depth = bit_depth or int(getattr(frame.format, "bits", 0) or 0)
-                decoded_duration += frame.samples / frame_rate
-
-            if decoded_frames == 0 or sample_rate <= 0:
-                raise ValueError("no decodable audio frames")
-
-    except AudioValidationError:
-        raise
-    except Exception as exc:
+        decoded = inspect_audio(data, ext)
+    except AudioDecodeError as exc:
+        if exc.reason == "decoder_unavailable":
+            raise AudioValidationError(
+                "Audio decoding support is unavailable on the server.",
+                error_code="AUDIO_DECODER_UNAVAILABLE",
+                status_code=503,
+            ) from exc
+        if exc.reason == "format_mismatch":
+            raise AudioValidationError(
+                "The file content does not match its audio extension.",
+                error_code="UNSUPPORTED_AUDIO_FORMAT",
+            ) from exc
         raise AudioValidationError(
             "The uploaded audio file could not be decoded.",
             error_code="INVALID_AUDIO",
         ) from exc
 
-    if not math.isfinite(decoded_duration) or decoded_duration <= 0:
-        raise AudioValidationError(
-            "The uploaded audio has no valid duration.",
-            error_code="INVALID_AUDIO",
-        )
-
     return AudioMetadata(
-        duration_seconds=round(decoded_duration, 6),
-        sample_rate=sample_rate,
-        channels=channels,
-        bit_depth=bit_depth,
+        duration_seconds=decoded.duration_seconds,
+        sample_rate=decoded.sample_rate,
+        channels=decoded.channels,
+        bit_depth=decoded.bit_depth,
         file_size_bytes=len(data),
         format_ext=ext,
     )
