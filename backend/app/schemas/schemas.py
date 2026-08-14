@@ -86,6 +86,32 @@ class TranscriptionResult(BaseModel):
     detected_speech: bool = False
 
 
+class AcousticFeatures(BaseModel):
+    rms_energy: float = Field(ge=0.0)
+    pitch_mean_hz: float | None = Field(default=None, ge=0.0)
+    pitch_std_hz: float | None = Field(default=None, ge=0.0)
+    zero_crossing_rate: float = Field(ge=0.0, le=1.0)
+    spectral_centroid_hz: float = Field(ge=0.0)
+    duration_seconds: float = Field(ge=0.0)
+    pause_ratio: float = Field(ge=0.0, le=1.0)
+    speech_rate_wpm: float | None = Field(default=None, ge=0.0)
+    voiced_ratio: float = Field(ge=0.0, le=1.0)
+    energy_variability: float = Field(ge=0.0)
+
+
+class SegmentAcousticFeatures(BaseModel):
+    segment_id: str
+    start_time: float
+    end_time: float
+    features: AcousticFeatures
+    session_deviations: dict[str, float] = Field(default_factory=dict)
+
+
+class AcousticAnalysis(BaseModel):
+    session_baselines: dict[str, float] = Field(default_factory=dict)
+    segments: list[SegmentAcousticFeatures] = Field(default_factory=list)
+
+
 # ─── Lap / Race Schemas ──────────────────────────────────────────────────────
 
 
