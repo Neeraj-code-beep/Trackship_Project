@@ -1,110 +1,165 @@
-"""
-Lazy-loaded model registry for AI/ML pipelines.
-Prevents slow server startups by deferring model initialization until first use.
-Provides graceful fallbacks when models are unavailable.
-"""
+"""Thread-safe lazy registry for the backend's AI models."""
 
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+import threading
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
+
+from backend.app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 
+class ModelUnavailableError(RuntimeError):
+    """Raised when a required AI model cannot be loaded."""
+
+    error_code = "MODEL_UNAVAILABLE"
+
+    def __init__(self, model_key: str, message: str) -> None:
+        self.model_key = model_key
+        super().__init__(message)
+
+
 class ModelRegistry:
-    """
-    Singleton registry that lazily loads AI/ML models on first access.
-    All models are initialized once and cached for subsequent calls.
-    """
+    """Load each configured model on first use and reuse it thereafter."""
 
-    _instance: Optional[ModelRegistry] = None
-    _models: dict[str, Any] = {}
-    _load_errors: dict[str, str] = {}
+    def __init__(self) -> None:
+        self._models: dict[str, Any] = {}
+        self._load_errors: dict[str, str] = {}
+        self._lock = threading.RLock()
+        self._device: str | None = None
 
-    def __new__(cls) -> ModelRegistry:
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._models = {}
-            cls._instance._load_errors = {}
-        return cls._instance
+    def get_whisper_model(self) -> Any:
+        """Return the cached Whisper model, loading it once when necessary."""
+        return self._get_or_load("whisper", self._load_whisper)
 
-    def get_whisper_model(self) -> Optional[Any]:
-        """
-        Lazily load OpenAI Whisper model (tiny for dev, base for production).
-        Returns None if whisper is not installed.
-        """
-        key = "whisper"
+    def get_emotion_model(self) -> Any:
+        """Return the cached speech-emotion pipeline, loading it once when necessary."""
+        return self._get_or_load("emotion_ser", self._load_emotion)
+
+    def _get_or_load(self, key: str, loader: Callable[[], Any]) -> Any:
         if key in self._models:
             return self._models[key]
-        if key in self._load_errors:
-            return None
 
-        try:
-            import whisper
+        with self._lock:
+            if key in self._models:
+                return self._models[key]
+            if key in self._load_errors:
+                raise ModelUnavailableError(
+                    key,
+                    f"The required '{key}' model is unavailable.",
+                )
 
-            logger.info("Loading Whisper model (tiny)...")
-            model = whisper.load_model("tiny")
+            logger.info("Loading AI model '%s'.", key)
+            try:
+                model = loader()
+                if model is None:
+                    raise RuntimeError("model loader returned no instance")
+            except Exception as exc:
+                safe_error = f"{type(exc).__name__}: model load failed"
+                self._load_errors[key] = safe_error
+                logger.exception("Failed to load AI model '%s'.", key)
+                raise ModelUnavailableError(
+                    key,
+                    f"The required '{key}' model could not be loaded.",
+                ) from exc
+
             self._models[key] = model
-            logger.info("Whisper model loaded successfully.")
+            logger.info("AI model '%s' loaded successfully.", key)
             return model
-        except ImportError:
-            self._load_errors[key] = "whisper package not installed"
-            logger.warning(
-                "Whisper not available. Using rule-based transcription fallback."
-            )
-            return None
-        except Exception as e:
-            self._load_errors[key] = str(e)
-            logger.warning(f"Failed to load Whisper model: {e}. Using fallback.")
-            return None
 
-    def get_emotion_model(self) -> Optional[Any]:
-        """
-        Lazily load a HuggingFace Speech Emotion Recognition model.
-        Returns None if transformers is not installed.
-        """
-        key = "emotion_ser"
-        if key in self._models:
-            return self._models[key]
-        if key in self._load_errors:
-            return None
+    def _load_whisper(self) -> Any:
+        import whisper
 
+        model_dir = self._model_directory("whisper")
+        return whisper.load_model(
+            settings.ASR_MODEL_NAME,
+            device=self.device,
+            download_root=str(model_dir),
+        )
+
+    def _load_emotion(self) -> Any:
+        from transformers import pipeline
+
+        token = settings.HF_TOKEN.get_secret_value() if settings.HF_TOKEN else None
+        pipeline_device = 0 if self.device == "cuda" else -1
+        return pipeline(
+            "audio-classification",
+            model=settings.EMOTION_MODEL_NAME,
+            device=pipeline_device,
+            token=token,
+        )
+
+    @property
+    def device(self) -> str:
+        """Resolve and cache the compute device without assuming CUDA."""
+        if self._device is not None:
+            return self._device
+
+        with self._lock:
+            if self._device is not None:
+                return self._device
+
+            requested = settings.AI_DEVICE.strip().lower()
+            if requested == "auto":
+                selected = "cuda" if self._cuda_available() else "cpu"
+            elif requested == "cuda":
+                if not self._cuda_available():
+                    raise RuntimeError("AI_DEVICE=cuda was requested but CUDA is unavailable")
+                selected = "cuda"
+            elif requested == "cpu":
+                selected = "cpu"
+            else:
+                raise RuntimeError("AI_DEVICE must be one of: auto, cpu, cuda")
+
+            self._device = selected
+            logger.info("Selected AI compute device: %s", selected)
+            return selected
+
+    @staticmethod
+    def _cuda_available() -> bool:
         try:
-            from transformers import pipeline
-
-            logger.info("Loading Speech Emotion Recognition pipeline...")
-            model = pipeline(
-                "audio-classification",
-                model="ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition",
-                top_k=4,
-            )
-            self._models[key] = model
-            logger.info("SER model loaded successfully.")
-            return model
+            import torch
         except ImportError:
-            self._load_errors[key] = "transformers package not installed"
-            logger.warning(
-                "HuggingFace transformers not available. "
-                "Using acoustic-feature-based emotion fallback."
+            return False
+        return bool(torch.cuda.is_available())
+
+    @staticmethod
+    def _model_directory(name: str) -> Path:
+        directory = (settings.MODEL_DIR / name).resolve()
+        directory.mkdir(parents=True, exist_ok=True)
+        return directory
+
+    def get_status(self) -> dict[str, Any]:
+        """Report registry state without importing or loading model libraries."""
+        keys = ("whisper", "emotion_ser")
+        states = {
+            key: (
+                "loaded"
+                if key in self._models
+                else "unavailable"
+                if key in self._load_errors
+                else "not_loaded"
             )
-            return None
-        except Exception as e:
-            self._load_errors[key] = str(e)
-            logger.warning(f"Failed to load SER model: {e}. Using fallback.")
-            return None
-
-    def is_model_available(self, key: str) -> bool:
-        """Check if a model is loaded or can be loaded."""
-        return key in self._models and key not in self._load_errors
-
-    def get_status(self) -> dict:
-        """Return the status of all model slots."""
+            for key in keys
+        }
         return {
-            "loaded": list(self._models.keys()),
+            "loaded": sorted(self._models),
             "errors": dict(self._load_errors),
+            "states": states,
+            "configured_device": settings.AI_DEVICE,
+            "selected_device": self._device,
         }
 
+    def reset(self) -> None:
+        """Clear registry state; intended for isolated tests only."""
+        with self._lock:
+            self._models.clear()
+            self._load_errors.clear()
+            self._device = None
 
-# Module-level singleton accessor
+
 registry = ModelRegistry()
