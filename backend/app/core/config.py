@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from pydantic import SecretStr, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     ASR_MODEL_NAME: str = "tiny"
     ASR_LANGUAGE: str | None = None
     EMOTION_MODEL_NAME: str = "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition"
+    SER_SEGMENT_SECONDS: float = Field(default=5.0, gt=0.0, le=60.0)
     AI_DEVICE: str = "auto"
     ENABLE_AI_MOCKS: bool = False
     HF_TOKEN: SecretStr | None = None

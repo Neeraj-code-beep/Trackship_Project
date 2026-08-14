@@ -6,23 +6,21 @@ POST /api/v1/analysis — triggers full audio processing pipeline and returns dr
 from __future__ import annotations
 
 import time
-from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from backend.app.analytics.insights import generate_insights
+from backend.app.analytics.lap_alignment import build_aligned_laps
 
+# In-memory stores (shared with race.py via module-level imports)
+from backend.app.api.routes import _stores
+from backend.app.core.config import settings
 from backend.app.schemas.schemas import (
     AnalysisRequest,
     AnalysisResponse,
     ErrorResponse,
 )
-from backend.app.core.config import settings
-from backend.app.services.transcription_service import transcribe_audio
 from backend.app.services.emotion_service import analyze_emotions
-from backend.app.analytics.lap_alignment import build_aligned_laps
-from backend.app.analytics.insights import generate_insights
-
-# In-memory stores (shared with race.py via module-level imports)
-from backend.app.api.routes import _stores
+from backend.app.services.transcription_service import transcribe_audio
+from fastapi import APIRouter, HTTPException
 
 router = APIRouter(prefix="/analysis", tags=["Analysis"])
 
@@ -69,7 +67,11 @@ async def run_analysis(request: AnalysisRequest):
     )
 
     # 2. Emotion analysis
-    driver_states = await analyze_emotions(data=data, ext=ext)
+    driver_states = await analyze_emotions(
+        data=data,
+        ext=ext,
+        segments=transcription.segments,
+    )
 
     # 3. Lap alignment & insights (if race data available)
     aligned_laps = []
@@ -89,34 +91,42 @@ async def run_analysis(request: AnalysisRequest):
             avg_fatigue = sum(s.probabilities.tired for s in driver_states) / len(driver_states)
 
             if avg_stress > 0.4:
-                insights.append(InsightItem(
-                    severity=InsightSeverity.WARNING,
-                    category="Emotional State",
-                    message=f"Elevated average stress ({avg_stress:.0%}) detected in audio. "
-                            f"Driver may be under pressure.",
-                ))
+                insights.append(
+                    InsightItem(
+                        severity=InsightSeverity.WARNING,
+                        category="Emotional State",
+                        message=f"Elevated average stress ({avg_stress:.0%}) detected in audio. "
+                        f"Driver may be under pressure.",
+                    )
+                )
             if avg_fatigue > 0.25:
-                insights.append(InsightItem(
-                    severity=InsightSeverity.WARNING,
-                    category="Fatigue",
-                    message=f"Moderate fatigue signals ({avg_fatigue:.0%}) detected. "
-                            f"Consider monitoring driver alertness.",
-                ))
-            insights.append(InsightItem(
-                severity=InsightSeverity.INFO,
-                category="Transcript",
-                message=f"Transcription complete: {len(transcription.segments)} "
-                        f"segments over {transcription.duration_seconds:.1f}s.",
-            ))
+                insights.append(
+                    InsightItem(
+                        severity=InsightSeverity.WARNING,
+                        category="Fatigue",
+                        message=f"Moderate fatigue signals ({avg_fatigue:.0%}) detected. "
+                        f"Consider monitoring driver alertness.",
+                    )
+                )
+            insights.append(
+                InsightItem(
+                    severity=InsightSeverity.INFO,
+                    category="Transcript",
+                    message=f"Transcription complete: {len(transcription.segments)} "
+                    f"segments over {transcription.duration_seconds:.1f}s.",
+                )
+            )
 
     # Compute overall metrics
     overall_stress = (
         sum(s.probabilities.stressed for s in driver_states) / len(driver_states)
-        if driver_states else 0.0
+        if driver_states
+        else 0.0
     )
     overall_fatigue = (
         sum(s.probabilities.tired for s in driver_states) / len(driver_states)
-        if driver_states else 0.0
+        if driver_states
+        else 0.0
     )
 
     elapsed = (time.time() - start_time) * 1000

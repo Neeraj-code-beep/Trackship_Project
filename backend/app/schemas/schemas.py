@@ -53,9 +53,13 @@ class EmotionProbabilities(BaseModel):
 
 
 class DriverState(BaseModel):
+    segment_id: str | None = None
     timestamp: float = Field(description="Seconds from start of audio")
+    start_time: float | None = None
+    end_time: float | None = None
     dominant_emotion: EmotionLabel
     probabilities: EmotionProbabilities
+    raw_emotions: dict[str, float] = Field(default_factory=dict)
     confidence: float = Field(ge=0.0, le=1.0)
     rms_energy: float | None = None
     speech_rate_wpm: float | None = None
