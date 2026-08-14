@@ -151,6 +151,13 @@ class LapIngestionResponse(BaseModel):
     message: str = "Lap data ingested successfully"
 
 
+class LapPerformanceBaseline(BaseModel):
+    baseline_lap_time: float = Field(gt=0)
+    method: str
+    sample_size: int = Field(ge=1)
+    outlier_lap_numbers: list[int] = Field(default_factory=list)
+
+
 # ─── Analysis Schemas ─────────────────────────────────────────────────────────
 
 
@@ -164,7 +171,10 @@ class AlignedLapEmotion(BaseModel):
     lap_time_seconds: float
     start_time: float = 0.0
     end_time: float = 0.0
+    baseline_lap_time: float = 0.0
+    lap_delta: float = 0.0
     delta_to_best: float = 0.0
+    is_timing_outlier: bool = False
     dominant_emotion: EmotionLabel
     stress_level: float = Field(ge=0.0, le=1.0, default=0.0)
     fatigue_level: float = Field(ge=0.0, le=1.0, default=0.0)
@@ -205,6 +215,7 @@ class RaceOverview(BaseModel):
     total_laps: int
     best_lap_time: float | None = None
     average_lap_time: float | None = None
+    baseline_lap_time: float | None = None
     laps: list[LapData] = []
     analyses: list[str] = Field(
         default_factory=list, description="List of analysis file_ids linked"

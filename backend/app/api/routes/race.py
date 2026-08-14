@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
+from backend.app.analytics.lap_performance import compute_lap_baseline
 from backend.app.api.routes import _stores
 from backend.app.core.config import settings
 from backend.app.schemas.schemas import (
@@ -84,12 +85,14 @@ async def get_race(race_id: str):
     laps = race["laps"]
     best_time = min((lap.lap_time_seconds for lap in laps), default=None)
     average_time = sum(lap.lap_time_seconds for lap in laps) / len(laps) if laps else None
+    baseline = compute_lap_baseline(laps) if laps else None
     return RaceOverview(
         race_id=race["race_id"],
         driver_name=race["driver_name"],
         total_laps=len(laps),
         best_lap_time=round(best_time, 3) if best_time is not None else None,
         average_lap_time=round(average_time, 3) if average_time is not None else None,
+        baseline_lap_time=baseline.baseline_lap_time if baseline else None,
         laps=laps,
         analyses=race.get("analyses", []),
         created_at=race["created_at"],

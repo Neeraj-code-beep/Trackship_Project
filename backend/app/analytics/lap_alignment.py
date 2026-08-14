@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 
+from backend.app.analytics.lap_performance import compute_lap_baseline, lap_delta
 from backend.app.schemas.schemas import (
     AlignedLapEmotion,
     DriverState,
@@ -84,6 +85,8 @@ def build_aligned_laps(
     normalized = normalize_laps(laps)
     lap_states = align_emotions_to_laps(driver_states, normalized)
     best_time = min(lap.lap_time_seconds for lap in normalized)
+    baseline = compute_lap_baseline(normalized)
+    outlier_laps = set(baseline.outlier_lap_numbers)
 
     aligned: list[AlignedLapEmotion] = []
     for lap in normalized:
@@ -98,7 +101,13 @@ def build_aligned_laps(
                 lap_time_seconds=lap.lap_time_seconds,
                 start_time=float(lap.start_time),
                 end_time=float(lap.end_time),
+                baseline_lap_time=baseline.baseline_lap_time,
+                lap_delta=lap_delta(
+                    lap.lap_time_seconds,
+                    baseline.baseline_lap_time,
+                ),
                 delta_to_best=round(lap.lap_time_seconds - best_time, 3),
+                is_timing_outlier=lap.lap_number in outlier_laps,
                 dominant_emotion=dominant,
                 stress_level=round(stress_score / 100.0, 4),
                 fatigue_level=round(fatigue_score / 100.0, 4),

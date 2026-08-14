@@ -33,6 +33,7 @@ def test_json_lap_ingestion_and_retrieval():
     assert overview.status_code == 200
     assert overview.json()["laps"][1]["start_time"] == 90.0
     assert overview.json()["laps"][1]["end_time"] == 181.0
+    assert overview.json()["baseline_lap_time"] == 90.5
 
 
 def test_csv_lap_ingestion():
