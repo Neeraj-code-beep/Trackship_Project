@@ -52,6 +52,19 @@ class EmotionProbabilities(BaseModel):
     tired: float = Field(ge=0.0, le=1.0, default=0.0)
 
 
+class AcousticFeatures(BaseModel):
+    rms_energy: float = Field(ge=0.0)
+    pitch_mean_hz: float | None = Field(default=None, ge=0.0)
+    pitch_std_hz: float | None = Field(default=None, ge=0.0)
+    zero_crossing_rate: float = Field(ge=0.0, le=1.0)
+    spectral_centroid_hz: float = Field(ge=0.0)
+    duration_seconds: float = Field(ge=0.0)
+    pause_ratio: float = Field(ge=0.0, le=1.0)
+    speech_rate_wpm: float | None = Field(default=None, ge=0.0)
+    voiced_ratio: float = Field(ge=0.0, le=1.0)
+    energy_variability: float = Field(ge=0.0)
+
+
 class DriverState(BaseModel):
     segment_id: str | None = None
     timestamp: float = Field(description="Seconds from start of audio")
@@ -61,6 +74,12 @@ class DriverState(BaseModel):
     probabilities: EmotionProbabilities
     raw_emotions: dict[str, float] = Field(default_factory=dict)
     confidence: float = Field(ge=0.0, le=1.0)
+    stress_score: float = Field(default=0.0, ge=0.0, le=100.0)
+    fatigue_score: float = Field(default=0.0, ge=0.0, le=100.0)
+    calm_score: float = Field(default=0.0, ge=0.0, le=100.0)
+    signals: dict[str, float] = Field(default_factory=dict)
+    drivers: list[str] = Field(default_factory=list)
+    acoustic_features: AcousticFeatures | None = None
     rms_energy: float | None = None
     speech_rate_wpm: float | None = None
 
@@ -84,19 +103,6 @@ class TranscriptionResult(BaseModel):
     language: str | None = None
     duration_seconds: float = 0.0
     detected_speech: bool = False
-
-
-class AcousticFeatures(BaseModel):
-    rms_energy: float = Field(ge=0.0)
-    pitch_mean_hz: float | None = Field(default=None, ge=0.0)
-    pitch_std_hz: float | None = Field(default=None, ge=0.0)
-    zero_crossing_rate: float = Field(ge=0.0, le=1.0)
-    spectral_centroid_hz: float = Field(ge=0.0)
-    duration_seconds: float = Field(ge=0.0)
-    pause_ratio: float = Field(ge=0.0, le=1.0)
-    speech_rate_wpm: float | None = Field(default=None, ge=0.0)
-    voiced_ratio: float = Field(ge=0.0, le=1.0)
-    energy_variability: float = Field(ge=0.0)
 
 
 class SegmentAcousticFeatures(BaseModel):
