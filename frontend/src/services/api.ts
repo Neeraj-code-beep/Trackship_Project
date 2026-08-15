@@ -118,6 +118,16 @@ export function normalizeError(err: unknown): string {
 
     const status = err.response.status;
     const data = err.response.data as any;
+    const backendMessage = typeof data?.error?.message === 'string'
+      ? data.error.message
+      : typeof data?.detail === 'string'
+        ? data.detail
+        : null;
+    const backendCode = typeof data?.error?.code === 'string'
+      ? data.error.code
+      : typeof data?.error_code === 'string'
+        ? data.error_code
+        : null;
 
     if (status === 422) {
       if (data && data.error && Array.isArray(data.error.details)) {
@@ -155,10 +165,14 @@ export function normalizeError(err: unknown): string {
       return 'Audio file is too large.';
     }
     if (status === 500) {
-      return 'Server error. Please try again.';
+      return backendMessage
+        ? `${backendMessage}${backendCode ? ` (${backendCode})` : ''}`
+        : 'Server error. Please try again.';
     }
     if (status === 503) {
-      return 'Required AI model service is currently unavailable.';
+      return backendMessage
+        ? `${backendMessage}${backendCode ? ` (${backendCode})` : ''}`
+        : 'Required AI model service is currently unavailable.';
     }
 
     if (data && typeof data.detail === 'string') {
@@ -168,6 +182,10 @@ export function normalizeError(err: unknown): string {
 
   const errorObj = err as Error;
   return errorObj.message || 'An unexpected error occurred.';
+}
+
+export function getHttpStatus(err: unknown): number | null {
+  return axios.isAxiosError(err) ? (err.response?.status ?? null) : null;
 }
 
 export default apiClient;

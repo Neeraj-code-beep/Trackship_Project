@@ -14,6 +14,7 @@ const MAX_SIZE_MB = 50;
 interface AudioUploadProps {
   onUploadComplete: (response: AudioUploadResponse) => void;
   initialUpload?: AudioUploadResponse | null;
+  initialPlaybackUrl?: string | null;
   isPlaying: boolean;
   setIsPlaying: (playing: boolean) => void;
   currentTime: number;
@@ -23,6 +24,8 @@ interface AudioUploadProps {
   seekTrigger: { time: number } | null;
   onFileSelect: (file: File | null) => void;
   onReset?: () => void;
+  onProgressChange?: (progress: UploadProgress) => void;
+  onPlaybackUrlChange?: (url: string | null) => void;
 }
 
 function formatTime(seconds: number): string {
@@ -35,6 +38,7 @@ function formatTime(seconds: number): string {
 export const AudioUpload: React.FC<AudioUploadProps> = ({
   onUploadComplete,
   initialUpload = null,
+  initialPlaybackUrl = null,
   isPlaying,
   setIsPlaying,
   currentTime,
@@ -44,6 +48,8 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
   seekTrigger,
   onFileSelect,
   onReset,
+  onProgressChange,
+  onPlaybackUrlChange,
 }) => {
   const [dragActive, setDragActive] = useState(false);
   const [progress, setProgress] = useState<UploadProgress>({
@@ -58,8 +64,13 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
   const [audioUrl, setAudioUrl] = useState<string>('');
 
   useEffect(() => {
+    onProgressChange?.(progress);
+  }, [onProgressChange, progress]);
+
+  useEffect(() => {
     if (initialUpload) {
       setUploadedFile(initialUpload);
+      setAudioUrl(initialPlaybackUrl ?? '');
       setProgress({
         status: 'complete',
         progress: 100,
@@ -71,7 +82,7 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
     setUploadedFile(null);
     setAudioUrl('');
     setProgress({ status: 'idle', progress: 0, message: 'Drop driver radio audio session or click to select file' });
-  }, [initialUpload]);
+  }, [initialPlaybackUrl, initialUpload]);
 
   const validateFile = (file: File): string | null => {
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -91,16 +102,17 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
       return;
     }
 
-    setProgress({ status: 'uploading', progress: 0, message: 'Ingesting Driver Radio Telemetry...' });
+    setProgress({ status: 'uploading', progress: 0, message: 'Uploading Driver Radio Audio...' });
 
     try {
       const response = await uploadAudio(file, (pct) => {
-        setProgress({ status: 'uploading', progress: pct, message: `Ingesting Driver Radio Audio... ${pct}%` });
+        setProgress({ status: 'uploading', progress: pct, message: `Uploading Driver Radio Audio... ${pct}%` });
       });
 
       // Set file and blob URL for browser playback
       const url = URL.createObjectURL(file);
       setAudioUrl(url);
+      onPlaybackUrlChange?.(url);
       onFileSelect(file);
 
       setUploadedFile(response);
@@ -110,11 +122,11 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
         message: `✓ Session Ingested: ${response.filename}`,
       });
       onUploadComplete(response);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const msg = normalizeError(err);
       setProgress({ status: 'error', progress: 0, message: msg });
     }
-  }, [onUploadComplete, onFileSelect]);
+  }, [onPlaybackUrlChange, onUploadComplete, onFileSelect]);
 
   // Audio Playback Effects
   useEffect(() => {
@@ -193,6 +205,7 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
     setProgress({ status: 'idle', progress: 0, message: 'Drop driver radio audio session or click to select file' });
     setUploadedFile(null);
     setAudioUrl('');
+    onPlaybackUrlChange?.(null);
     onFileSelect(null);
     setIsPlaying(false);
     setCurrentTime(0);
@@ -240,6 +253,15 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
         onDragOver={handleDrag}
         onDrop={handleDrop}
         onClick={() => progress.status !== 'uploading' && progress.status !== 'complete' && inputRef.current?.click()}
+        onKeyDown={(event) => {
+          if ((event.key === 'Enter' || event.key === ' ') && progress.status !== 'uploading' && progress.status !== 'complete') {
+            event.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+        role={progress.status !== 'uploading' && progress.status !== 'complete' ? 'button' : undefined}
+        tabIndex={progress.status !== 'uploading' && progress.status !== 'complete' ? 0 : undefined}
+        aria-label={progress.status !== 'uploading' && progress.status !== 'complete' ? 'Upload real driver radio audio' : undefined}
         whileHover={{ scale: progress.status === 'idle' ? 1.002 : 1 }}
         whileTap={{ scale: 0.998 }}
         style={{ cursor: progress.status === 'complete' ? 'default' : 'pointer' }}
@@ -352,7 +374,12 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
                 <div className="sc-radio-player__tags font-telemetry">
                   <span className="sc-dropzone__tag"><FileAudio size={12} /> {uploadedFile.format.toUpperCase()}</span>
                   <span className="sc-dropzone__tag">{(uploadedFile.file_size_bytes / 1024).toFixed(0)} KB</span>
-                  <span className="sc-dropzone__tag"><Volume2 size={12} /> 44.1kHz</span>
+                  <span className="sc-dropzone__tag">
+                    <Volume2 size={12} />
+                    {uploadedFile.sample_rate
+                      ? `${(uploadedFile.sample_rate / 1000).toFixed(1)}kHz`
+                      : 'SAMPLE RATE UNKNOWN'}
+                  </span>
                 </div>
                 <Button
                   variant="ghost"

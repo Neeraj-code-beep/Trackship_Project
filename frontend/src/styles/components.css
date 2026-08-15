@@ -91,6 +91,9 @@
   align-items: center;
   gap: var(--space-12);
   cursor: pointer;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .sc-app-nav__logo-icon {
@@ -128,7 +131,15 @@
   cursor: pointer;
   padding: 4px 10px;
   border-radius: var(--radius-xs);
+  border: 1px solid transparent;
+  background: transparent;
   transition: all var(--motion-fast);
+}
+
+.sc-app-nav__logo:focus-visible,
+.sc-app-nav__item:focus-visible {
+  outline: 2px solid var(--color-brand-lime);
+  outline-offset: 3px;
 }
 
 .sc-app-nav__item:hover {
@@ -237,7 +248,8 @@
 }
 
 @media (max-width: 480px) {
-  .sc-app-nav__nav-items a.sc-app-nav__item {
+  .sc-app-nav__nav-items .sc-app-nav__item:first-child,
+  .sc-app-nav__right > .sc-button {
     display: none !important;
   }
 }

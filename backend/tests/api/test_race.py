@@ -71,3 +71,23 @@ def test_duplicate_json_lap_returns_structured_validation_error():
 
     assert response.status_code == 400
     assert response.json()["error_code"] == "INVALID_LAP_DATA"
+
+
+def test_retrying_an_already_ingested_lap_is_rejected_without_mutating_race():
+    client = TestClient(app, raise_server_exceptions=False)
+    payload = {
+        "race_id": "race-retry",
+        "driver_name": "Test Driver",
+        "laps": [{"lap_number": 1, "lap_time_seconds": 90}],
+    }
+
+    first = client.post("/api/v1/race/laps", json=payload)
+    retry = client.post("/api/v1/race/laps", json=payload)
+
+    assert first.status_code == 200
+    assert retry.status_code == 400
+    assert retry.json()["detail"] == "Duplicate lap number 1."
+
+    overview = client.get("/api/v1/race/race-retry")
+    assert overview.status_code == 200
+    assert overview.json()["total_laps"] == 1

@@ -47,11 +47,13 @@ export interface DriverState {
   drivers: string[];
   rms_energy: number | null;
   speech_rate_wpm: number | null;
+  acoustic_features: AcousticFeatures | null;
 }
 
 // ─── Transcription ───────────────────────────────────────────────────────────
 
 export interface TranscriptSegment {
+  id: string;
   start_time: number;
   end_time: number;
   text: string;
@@ -219,6 +221,7 @@ export interface RaceOverview {
   total_laps: number;
   best_lap_time: number | null;
   average_lap_time: number | null;
+  baseline_lap_time: number | null;
   laps: LapData[];
   analyses: string[];
   created_at: string;
