@@ -42,7 +42,7 @@ export const RaceInsightsFeed: React.FC<RaceInsightsFeedProps> = ({ insights }) 
             <span className="text-micro font-telemetry">AUTOMATED RACE OBSERVATIONS</span>
           </div>
         </div>
-        <SignalIndicator status="processing" label="LIVE ENGINE" />
+        <SignalIndicator status="active" label="ANALYSIS EVIDENCE" />
       </div>
 
       <div className="sc-insights-card__ai-banner">
@@ -59,15 +59,17 @@ export const RaceInsightsFeed: React.FC<RaceInsightsFeedProps> = ({ insights }) 
           if (insight.severity === 'critical') sev = 'critical';
           else if (insight.severity === 'warning') sev = 'warning';
 
-          // Extract recommendation if available
-          const rec = (insight.data as any)?.recommendation || (
-            insight.severity === 'critical'
-              ? 'Instruct driver to adjust entry line into Turn 7 & review pit window.'
-              : undefined
-          );
+          const recommendation = insight.data?.recommendation;
+          const rec = typeof recommendation === 'string' ? recommendation : undefined;
           const evidence = Object.entries(insight.evidence ?? {})
-            .slice(0, 3)
-            .map(([key, value]) => `${key}: ${typeof value === 'number' ? value.toFixed(3) : String(value)}`)
+            .map(([key, value]) => {
+              const rendered = typeof value === 'number'
+                ? value.toFixed(3)
+                : typeof value === 'object'
+                  ? JSON.stringify(value)
+                  : String(value);
+              return `${key}: ${rendered}`;
+            })
             .join(' · ');
 
           return (
@@ -79,8 +81,8 @@ export const RaceInsightsFeed: React.FC<RaceInsightsFeedProps> = ({ insights }) 
             >
               <Alert
                 severity={sev}
-                title={insight.category}
-                category={insight.category}
+                title={insight.title || insight.category}
+                category={`${insight.priority.toUpperCase()} PRIORITY · ${insight.category}`}
                 lapNumber={insight.lap_number ?? undefined}
                 message={insight.message}
                 recommendation={rec}

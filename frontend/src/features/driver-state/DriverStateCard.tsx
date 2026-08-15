@@ -1,16 +1,16 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Activity, Heart, Minus, Moon, Zap, ShieldCheck } from 'lucide-react';
-import type { EmotionProbabilities, EmotionLabel } from '../../types';
+import type { EmotionLabel } from '../../types';
 import ProgressBar from '../../components/ui/ProgressBar';
 import { EmptyState } from '../../components/ui/State';
 import './DriverState.css';
 
 interface DriverStateCardProps {
-  overallStress: number | null;
-  overallFatigue: number | null;
+  stressScore: number | null;
+  fatigueScore: number | null;
+  calmScore: number | null;
   dominantEmotion?: EmotionLabel;
-  probabilities?: EmotionProbabilities;
   confidence?: number | null;
   processingTime?: number;
 }
@@ -43,14 +43,14 @@ const emotionConfig: Record<EmotionLabel, { icon: React.ReactNode; color: string
 };
 
 export const DriverStateCard: React.FC<DriverStateCardProps> = ({
-  overallStress,
-  overallFatigue,
+  stressScore,
+  fatigueScore,
+  calmScore,
   dominantEmotion = 'neutral',
-  probabilities,
   confidence,
   processingTime,
 }) => {
-  if (overallStress === null || overallFatigue === null || !probabilities) {
+  if (stressScore === null || fatigueScore === null || calmScore === null) {
     return (
       <div className="sc-driver-card">
         <div className="sc-driver-card__header">
@@ -75,10 +75,9 @@ export const DriverStateCard: React.FC<DriverStateCardProps> = ({
 
   const config = emotionConfig[dominantEmotion] || emotionConfig.neutral;
 
-  const calmVal = (probabilities?.calm ?? 0) * 100;
-  const stressVal = (probabilities?.stressed ?? overallStress) * 100;
-  const neutralVal = (probabilities?.neutral ?? 0) * 100;
-  const fatigueVal = (probabilities?.tired ?? overallFatigue) * 100;
+  const calmVal = calmScore;
+  const stressVal = stressScore;
+  const fatigueVal = fatigueScore;
   const confidencePct = confidence !== undefined && confidence !== null ? confidence * 100 : null;
   const confidenceLabel = confidencePct !== null ? `${confidencePct.toFixed(0)}%` : '--';
 
@@ -96,7 +95,7 @@ export const DriverStateCard: React.FC<DriverStateCardProps> = ({
         </div>
         {processingTime !== undefined && (
           <span className="sc-driver-card__latency font-telemetry text-micro">
-            {processingTime.toFixed(0)}ms INFERENCE
+            {processingTime.toFixed(0)}ms PIPELINE
           </span>
         )}
       </div>
@@ -131,15 +130,15 @@ export const DriverStateCard: React.FC<DriverStateCardProps> = ({
         </div>
       </motion.div>
 
-      {/* Probability Spectrum List */}
+      {/* Fused driver state scores returned by the backend (0–100). */}
       <div className="sc-driver-card__spectrum">
         <div className="sc-driver-card__spectrum-header">
-          <span className="text-micro">PROBABILITY DISTRIBUTION SPECTRUM</span>
+          <span className="text-micro">FUSED DRIVER STATE SCORES</span>
         </div>
 
         <div className="sc-driver-card__bar-item">
           <div className="sc-driver-card__bar-meta font-telemetry text-micro">
-            <span className="font-display" style={{ color: 'var(--color-text-primary)' }}>Stressed</span>
+            <span className="font-display" style={{ color: 'var(--color-text-primary)' }}>Stress</span>
             <span style={{ color: 'var(--color-driver-stressed)' }}>
               {stressVal.toFixed(1)}%
             </span>
@@ -149,7 +148,7 @@ export const DriverStateCard: React.FC<DriverStateCardProps> = ({
 
         <div className="sc-driver-card__bar-item">
           <div className="sc-driver-card__bar-meta font-telemetry text-micro">
-            <span className="font-display" style={{ color: 'var(--color-text-primary)' }}>Calm / Nominal</span>
+            <span className="font-display" style={{ color: 'var(--color-text-primary)' }}>Calm</span>
             <span style={{ color: 'var(--color-driver-calm)' }}>
               {calmVal.toFixed(1)}%
             </span>
@@ -159,7 +158,7 @@ export const DriverStateCard: React.FC<DriverStateCardProps> = ({
 
         <div className="sc-driver-card__bar-item">
           <div className="sc-driver-card__bar-meta font-telemetry text-micro">
-            <span className="font-display" style={{ color: 'var(--color-text-primary)' }}>Fatigue / Fatigue Index</span>
+            <span className="font-display" style={{ color: 'var(--color-text-primary)' }}>Fatigue</span>
             <span style={{ color: 'var(--color-driver-fatigue)' }}>
               {fatigueVal.toFixed(1)}%
             </span>
@@ -167,15 +166,6 @@ export const DriverStateCard: React.FC<DriverStateCardProps> = ({
           <ProgressBar value={fatigueVal} color="fatigue" height={6} />
         </div>
 
-        <div className="sc-driver-card__bar-item">
-          <div className="sc-driver-card__bar-meta font-telemetry text-micro">
-            <span className="font-display" style={{ color: 'var(--color-text-primary)' }}>Neutral Baseline</span>
-            <span style={{ color: 'var(--color-text-secondary)' }}>
-              {neutralVal.toFixed(1)}%
-            </span>
-          </div>
-          <ProgressBar value={neutralVal} color="neutral" height={6} />
-        </div>
       </div>
     </div>
   );

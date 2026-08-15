@@ -1,11 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { MessageSquare, Clock, ShieldCheck, Zap } from 'lucide-react';
-import type { TranscriptSegment } from '../../types';
+import type { DriverState, TranscriptSegment } from '../../types';
 import { EmptyState } from '../../components/ui/State';
 import './TranscriptTimeline.css';
 
 interface TranscriptTimelineProps {
   segments: TranscriptSegment[];
+  states: DriverState[];
   currentTime: number;
   onSegmentClick?: (time: number) => void;
 }
@@ -18,6 +19,7 @@ function formatTime(seconds: number): string {
 
 export const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({
   segments = [],
+  states = [],
   currentTime,
   onSegmentClick,
 }) => {
@@ -27,6 +29,11 @@ export const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({
   // Find active segment index
   const activeIdx = segments.findIndex(
     (seg) => currentTime >= seg.start_time && currentTime <= seg.end_time
+  );
+  const statesBySegmentId = new Map(
+    states
+      .filter((state) => state.segment_id)
+      .map((state) => [state.segment_id as string, state])
   );
 
   // Scroll active segment into view
@@ -84,30 +91,24 @@ export const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({
       <div ref={scrollContainerRef} className="sc-transcript-timeline">
         {segments.map((seg, i) => {
           const isActive = i === activeIdx;
-          const isStressFlagged =
-            seg.text.toLowerCase().includes('gone') ||
-            seg.text.toLowerCase().includes('sliding') ||
-            seg.text.toLowerCase().includes('losing') ||
-            seg.text.toLowerCase().includes('tired') ||
-            seg.text.toLowerCase().includes('push') ||
-            seg.text.toLowerCase().includes('stress') ||
-            seg.text.toLowerCase().includes('rear') ||
-            seg.text.toLowerCase().includes('moving') ||
-            seg.text.toLowerCase().includes('traffic');
+          const driverState = statesBySegmentId.get(seg.id);
+          const isStressFlagged = driverState?.dominant_emotion === 'stressed';
 
           return (
             <div
-              key={i}
+              key={seg.id}
               ref={isActive ? activeItemRef : null}
               className={`sc-transcript-item ${isStressFlagged ? 'sc-transcript-item--flagged' : ''} ${isActive ? 'sc-transcript-item--active' : ''}`}
               onClick={() => onSegmentClick && onSegmentClick(seg.start_time)}
               onKeyDown={(e) => {
                 if ((e.key === 'Enter' || e.key === ' ') && onSegmentClick) {
+                  e.preventDefault();
                   onSegmentClick(seg.start_time);
                 }
               }}
-              role="button"
-              tabIndex={0}
+              role={onSegmentClick ? 'button' : undefined}
+              tabIndex={onSegmentClick ? 0 : undefined}
+              aria-label={onSegmentClick ? `Seek audio to ${formatTime(seg.start_time)}: ${seg.text}` : undefined}
             >
               <div className="sc-transcript-item__left">
                 <span className="sc-transcript-item__time font-telemetry">
@@ -121,7 +122,7 @@ export const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({
               <div className="sc-transcript-item__body">
                 <div className="sc-transcript-item__meta">
                   <span className={`sc-transcript-item__speaker font-telemetry ${(seg.speaker || '').toLowerCase().includes('engineer') ? 'sc-transcript-item__speaker--engineer' : ''}`}>
-                    {seg.speaker || 'DRIVER 01'}
+                    {seg.speaker || 'SPEAKER UNKNOWN'}
                   </span>
 
                   <span className="sc-transcript-item__conf font-telemetry text-micro">
@@ -134,7 +135,7 @@ export const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({
                   {isStressFlagged && (
                     <span className="sc-transcript-item__flag font-telemetry text-micro">
                       <Zap size={10} />
-                      STRESS ELEVATED
+                      STRESS ELEVATED · {(driverState.confidence * 100).toFixed(0)}% SER
                     </span>
                   )}
                 </div>

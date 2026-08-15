@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Line,
@@ -21,212 +21,71 @@ import { Input } from '../../components/ui/Input';
 import SignalIndicator from '../../components/ui/SignalIndicator';
 import AnimatedNumber from '../../components/ui/AnimatedNumber';
 import { EmptyState } from '../../components/ui/State';
-import { normalizeError, runAnalysis, uploadLapTelemetryCsv } from '../../services/api';
 import type {
   AlignedLapEmotion,
-  AnalysisResponse,
-  AudioUploadResponse,
-  CorrelationResult,
-  LapIngestionResponse,
   TranscriptSegment,
 } from '../../types';
+import { useAnalysisSession } from '../../state/AnalysisSessionContext';
+import {
+  correlationReason,
+  formatCorrelation,
+  formatLapTime,
+  getDriverStateView,
+} from '../../features/analysis/analysisView';
 import './Dashboard.css';
 
-const AUDIO_SESSION_KEY = 'silent-co-driver.audio-session';
-const TELEMETRY_SESSION_KEY = 'silent-co-driver.telemetry-session';
-
-interface TelemetrySession {
-  race_id: string;
-  driver_name: string;
-  laps_received: number;
-  message: string;
-  source_filename: string;
-  uploaded_at: string;
-}
-
-function createRaceId(): string {
-  const randomId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  return `race-${randomId}`;
-}
-
-function readStoredValue<T>(key: string): T | null {
-  if (typeof window === 'undefined') return null;
-  const raw = window.localStorage.getItem(key);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    window.localStorage.removeItem(key);
-    return null;
-  }
-}
-
-function formatLapTime(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds <= 0) return '--:--.---';
-  const minutes = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${minutes.toString().padStart(2, '0')}:${secs.toFixed(3).padStart(6, '0')}`;
-}
-
-function formatCorrelation(result?: CorrelationResult): string {
-  if (!result) return '—';
-  if (result.pearson_r === null) {
-    return `N/A · ${result.reason ?? 'insufficient_data'}`;
-  }
-  const signed = result.pearson_r >= 0 ? `+${result.pearson_r.toFixed(2)}` : result.pearson_r.toFixed(2);
-  return `${signed} · ${result.direction} ${result.strength}`;
-}
-
-function average(values: number[]): number | null {
-  if (!values.length) return null;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
 export const Dashboard: React.FC = () => {
-  const [audioSession, setAudioSession] = useState<AudioUploadResponse | null>(() =>
-    readStoredValue<AudioUploadResponse>(AUDIO_SESSION_KEY)
-  );
-  const [telemetrySession, setTelemetrySession] = useState<TelemetrySession | null>(() =>
-    readStoredValue<TelemetrySession>(TELEMETRY_SESSION_KEY)
-  );
-  const [raceId, setRaceId] = useState<string>(() => {
-    const storedTelemetry = readStoredValue<TelemetrySession>(TELEMETRY_SESSION_KEY);
-    return storedTelemetry?.race_id ?? createRaceId();
-  });
-  const [driverName, setDriverName] = useState<string>(() => {
-    const storedTelemetry = readStoredValue<TelemetrySession>(TELEMETRY_SESSION_KEY);
-    return storedTelemetry?.driver_name ?? '';
-  });
+  const {
+    audioSession,
+    audioPlaybackUrl,
+    telemetrySession,
+    analysis,
+    analysisError,
+    telemetryError,
+    raceId,
+    driverName,
+    telemetryVerification,
+    isTelemetryUploading,
+    isAnalyzing,
+    status,
+    setRaceId,
+    setDriverName,
+    setAudioProgress,
+    setAudioPlaybackUrl,
+    completeAudioUpload,
+    resetAudio,
+    uploadTelemetry,
+    resetTelemetry,
+    startAnalysis,
+  } = useAnalysisSession();
   const [telemetryFile, setTelemetryFile] = useState<File | null>(null);
-  const [telemetryError, setTelemetryError] = useState<string | null>(null);
-  const [isTelemetryUploading, setIsTelemetryUploading] = useState(false);
-  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [seekTrigger, setSeekTrigger] = useState<{ time: number } | null>(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (audioSession) {
-      window.localStorage.setItem(AUDIO_SESSION_KEY, JSON.stringify(audioSession));
-    } else {
-      window.localStorage.removeItem(AUDIO_SESSION_KEY);
-    }
-  }, [audioSession]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (telemetrySession) {
-      window.localStorage.setItem(TELEMETRY_SESSION_KEY, JSON.stringify(telemetrySession));
-    } else {
-      window.localStorage.removeItem(TELEMETRY_SESSION_KEY);
-    }
-  }, [telemetrySession]);
-
-  const handleUploadComplete = useCallback((response: AudioUploadResponse) => {
-    setAudioSession(response);
-    setError(null);
-    setAnalysis(null);
-  }, []);
+  const telemetryFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAudioReset = useCallback(() => {
-    setAudioSession(null);
-    setAnalysis(null);
-    setError(null);
-    setIsAnalyzing(false);
+    resetAudio();
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
-  }, []);
+  }, [resetAudio]);
 
   const handleTelemetryUpload = useCallback(async () => {
-    if (!telemetryFile) {
-      setTelemetryError('Upload race telemetry before starting analysis.');
-      return;
-    }
-    if (!driverName.trim()) {
-      setTelemetryError('Driver name is required for telemetry ingestion.');
-      return;
-    }
-    if (!raceId.trim()) {
-      setTelemetryError('Race session ID is required for telemetry ingestion.');
-      return;
-    }
-
-    setIsTelemetryUploading(true);
-    setTelemetryError(null);
-    setError(null);
-    setAnalysis(null);
-
-    try {
-      const response: LapIngestionResponse = await uploadLapTelemetryCsv({
-        raceId: raceId.trim(),
-        driverName: driverName.trim(),
-        file: telemetryFile,
-      });
-
-      const nextTelemetry: TelemetrySession = {
-        race_id: response.race_id,
-        driver_name: response.driver_name,
-        laps_received: response.laps_received,
-        message: response.message,
-        source_filename: telemetryFile.name,
-        uploaded_at: new Date().toISOString(),
-      };
-
-      setTelemetrySession(nextTelemetry);
-      setRaceId(response.race_id);
-      setDriverName(response.driver_name);
+    if (!telemetryFile) return;
+    const uploaded = await uploadTelemetry(telemetryFile);
+    if (uploaded) {
       setTelemetryFile(null);
-    } catch (err: unknown) {
-      setTelemetryError(normalizeError(err));
-    } finally {
-      setIsTelemetryUploading(false);
+      if (telemetryFileInputRef.current) telemetryFileInputRef.current.value = '';
     }
-  }, [driverName, raceId, telemetryFile]);
-
-  const handleStartAnalysis = useCallback(async () => {
-    if (!audioSession?.file_id) {
-      setError('Upload real driver audio before starting analysis.');
-      return;
-    }
-    if (!telemetrySession?.race_id) {
-      setError('Upload race telemetry before starting analysis.');
-      return;
-    }
-
-    setIsAnalyzing(true);
-    setError(null);
-    setAnalysis(null);
-
-    try {
-      const result = await runAnalysis({
-        file_id: audioSession.file_id,
-        race_id: telemetrySession.race_id,
-      });
-      setAnalysis(result);
-    } catch (err: unknown) {
-      setError(normalizeError(err));
-    } finally {
-      setIsAnalyzing(false);
-    }
-  }, [audioSession?.file_id, telemetrySession?.race_id]);
+  }, [telemetryFile, uploadTelemetry]);
 
   const handleResetTelemetry = useCallback(() => {
-    setTelemetrySession(null);
+    resetTelemetry();
     setTelemetryFile(null);
-    setTelemetryError(null);
-    setAnalysis(null);
-    setError(null);
-    setRaceId(createRaceId());
-    setDriverName('');
-  }, []);
+    if (telemetryFileInputRef.current) telemetryFileInputRef.current.value = '';
+  }, [resetTelemetry]);
 
   const alignedLaps: AlignedLapEmotion[] = analysis?.aligned_laps ?? [];
   const chartData = alignedLaps.map((lap) => ({
@@ -238,24 +97,7 @@ export const Dashboard: React.FC = () => {
   }));
   const bestLap = chartData.length > 0 ? Math.min(...chartData.map((entry) => entry.lapTime)) : null;
   const lapCount = analysis?.aligned_laps.length ?? 0;
-  const avgConfidence = average(analysis?.driver_states.map((state) => state.confidence) ?? []);
-  const averageProbs = analysis?.driver_states.length
-    ? {
-        calm:
-          analysis.driver_states.reduce((sum, state) => sum + state.probabilities.calm, 0) /
-          analysis.driver_states.length,
-        stressed:
-          analysis.driver_states.reduce((sum, state) => sum + state.probabilities.stressed, 0) /
-          analysis.driver_states.length,
-        neutral:
-          analysis.driver_states.reduce((sum, state) => sum + state.probabilities.neutral, 0) /
-          analysis.driver_states.length,
-        tired:
-          analysis.driver_states.reduce((sum, state) => sum + state.probabilities.tired, 0) /
-          analysis.driver_states.length,
-      }
-    : undefined;
-
+  const driverStateView = getDriverStateView(analysis);
   const dominantEmotion = analysis?.summary.dominant_state;
   const stressCorrelation = analysis?.correlations.stress_vs_lap_delta;
   const fatigueCorrelation = analysis?.correlations.fatigue_vs_lap_delta;
@@ -264,8 +106,25 @@ export const Dashboard: React.FC = () => {
   const hasAlignedLapData = chartData.length > 0;
   const chartReady = Boolean(analysis) && hasAlignedLapData;
   const audioReady = Boolean(audioSession?.file_id);
-  const telemetryReady = Boolean(telemetrySession?.race_id);
+  const telemetryReady = Boolean(telemetrySession?.race_id) && telemetryVerification === 'verified';
+  const telemetryLocked = Boolean(telemetrySession);
+  const isTelemetryVerifying = telemetryVerification === 'checking';
   const analysisReady = audioReady && telemetryReady;
+  const sessionStatusLabel = status === 'analysis_complete'
+    ? 'ANALYSIS COMPLETE'
+    : status === 'analyzing'
+      ? 'ANALYZING SESSION'
+      : status === 'analysis_failed'
+        ? 'ANALYSIS FAILED'
+        : status === 'telemetry_ready'
+          ? 'TELEMETRY READY'
+          : status === 'radio_connected'
+            ? 'RADIO CONNECTED'
+            : status === 'uploading_audio'
+              ? 'UPLOADING RADIO'
+              : status === 'uploading_telemetry' || status === 'verifying_telemetry'
+                ? 'PREPARING TELEMETRY'
+                : 'WAITING FOR REAL DATA';
 
   return (
     <div className="sc-console">
@@ -288,16 +147,10 @@ export const Dashboard: React.FC = () => {
                 <h1 className="sc-console__title text-h2 font-display">SILENT CO-DRIVER</h1>
                 <span className="sc-console__session-badge font-telemetry">
                   <Flag size={10} style={{ display: 'inline', marginRight: 4 }} />
-                  BAHRAIN GP · PRACTICE 2
+                  {telemetrySession?.race_id ?? 'NO RACE SESSION'}
                 </span>
                 <span className="sc-console__lap-tag font-telemetry">
-                  {analysis
-                    ? `ANALYSIS COMPLETE · ${lapCount} LAPS`
-                    : isAnalyzing
-                      ? 'ANALYZING RADIO'
-                      : analysisReady
-                        ? 'READY FOR ANALYSIS'
-                        : 'UPLOAD AUDIO + TELEMETRY'}
+                  {analysis ? `${sessionStatusLabel} · ${lapCount} LAPS` : sessionStatusLabel}
                 </span>
               </div>
               <p className="sc-console__subtitle text-caption">AI-POWERED RACE ENGINEERING WORKSTATION</p>
@@ -305,16 +158,8 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <SignalIndicator
-            status={analysis ? 'active' : isAnalyzing ? 'processing' : analysisReady ? 'active' : 'idle'}
-            label={
-              analysis
-                ? 'TELEMETRY LIVE'
-                : isAnalyzing
-                  ? 'ANALYZING SPEECH'
-                  : analysisReady
-                    ? 'SESSION READY ●'
-                    : 'WAITING FOR REAL DATA ●'
-            }
+            status={analysis ? 'active' : isAnalyzing ? 'processing' : analysisError ? 'idle' : analysisReady ? 'active' : 'idle'}
+            label={sessionStatusLabel}
           />
         </div>
 
@@ -373,8 +218,9 @@ export const Dashboard: React.FC = () => {
         <div className="sc-console__col-main">
           <section className="sc-console__section" id="radio-feed">
             <AudioUpload
-              onUploadComplete={handleUploadComplete}
+              onUploadComplete={completeAudioUpload}
               initialUpload={audioSession}
+              initialPlaybackUrl={audioPlaybackUrl}
               isPlaying={isPlaying}
               setIsPlaying={setIsPlaying}
               currentTime={currentTime}
@@ -384,6 +230,8 @@ export const Dashboard: React.FC = () => {
               seekTrigger={seekTrigger}
               onFileSelect={() => undefined}
               onReset={handleAudioReset}
+              onProgressChange={setAudioProgress}
+              onPlaybackUrlChange={setAudioPlaybackUrl}
             />
           </section>
 
@@ -417,22 +265,27 @@ export const Dashboard: React.FC = () => {
                 value={raceId}
                 onChange={(event) => setRaceId(event.target.value)}
                 placeholder="race-2026-08-15-myclub"
+                disabled={telemetryLocked || isTelemetryUploading}
               />
               <Input
                 label="Driver Name"
                 value={driverName}
                 onChange={(event) => setDriverName(event.target.value)}
                 placeholder="Enter driver name"
+                disabled={telemetryLocked || isTelemetryUploading}
               />
             </div>
 
             <div className="sc-telemetry-card__file">
-              <span className="text-label">Lap Telemetry CSV</span>
+              <label className="text-label" htmlFor="lap-telemetry-csv">Lap Telemetry CSV</label>
               <input
+                id="lap-telemetry-csv"
+                ref={telemetryFileInputRef}
                 type="file"
                 accept=".csv,text/csv"
                 onChange={(event) => setTelemetryFile(event.target.files?.[0] ?? null)}
                 className="sc-telemetry-card__input"
+                disabled={telemetryLocked || isTelemetryUploading}
               />
               <p className="text-caption" style={{ margin: '6px 0 0' }}>
                 Upload a real CSV with lap, lap_time, and start_time columns. No synthetic telemetry is generated.
@@ -449,17 +302,17 @@ export const Dashboard: React.FC = () => {
                 variant="secondary"
                 size="md"
                 isLoading={isTelemetryUploading}
-                disabled={!telemetryFile || !driverName.trim() || !raceId.trim()}
+                disabled={telemetryLocked || !telemetryFile || !driverName.trim() || !raceId.trim()}
                 onClick={handleTelemetryUpload}
               >
-                Upload race telemetry
+                {telemetryLocked ? 'Telemetry already ingested' : 'Upload race telemetry'}
               </Button>
               <Button
                 variant="primary"
                 size="md"
                 isLoading={isAnalyzing}
-                disabled={!analysisReady || isAnalyzing}
-                onClick={handleStartAnalysis}
+                disabled={!analysisReady || isAnalyzing || isTelemetryVerifying}
+                onClick={startAnalysis}
               >
                 Start analysis
               </Button>
@@ -474,7 +327,7 @@ export const Dashboard: React.FC = () => {
             </div>
 
             <div className="sc-telemetry-card__status">
-              {telemetrySession ? (
+              {telemetrySession && telemetryVerification === 'verified' ? (
                 <div className="sc-telemetry-card__status-block">
                   <span className="sc-telemetry-card__status-title text-micro font-telemetry">REAL TELEMETRY READY</span>
                   <span className="sc-telemetry-card__status-body text-body-sm">
@@ -482,6 +335,15 @@ export const Dashboard: React.FC = () => {
                   </span>
                   <span className="sc-telemetry-card__status-note text-caption">
                     {telemetrySession.message} Uploaded from {telemetrySession.source_filename}.
+                  </span>
+                </div>
+              ) : telemetrySession ? (
+                <div className="sc-telemetry-card__status-block">
+                  <span className="sc-telemetry-card__status-title text-micro font-telemetry">
+                    {isTelemetryVerifying ? 'VERIFYING SAVED TELEMETRY' : 'TELEMETRY VERIFICATION REQUIRED'}
+                  </span>
+                  <span className="sc-telemetry-card__status-body text-body-sm">
+                    Analysis will remain disabled until race session {telemetrySession.race_id} is confirmed by the backend.
                   </span>
                 </div>
               ) : (
@@ -494,7 +356,7 @@ export const Dashboard: React.FC = () => {
             </div>
 
             {telemetryError && (
-              <div className="sc-telemetry-card__error">
+              <div className="sc-telemetry-card__error" role="alert">
                 <ShieldAlert size={14} />
                 <span>{telemetryError}</span>
               </div>
@@ -504,6 +366,7 @@ export const Dashboard: React.FC = () => {
           {isAnalyzing && (
             <motion.section
               className="sc-console__section sc-loading-banner"
+              aria-live="polite"
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
             >
@@ -519,11 +382,11 @@ export const Dashboard: React.FC = () => {
             </motion.section>
           )}
 
-          {error && (
-            <section className="sc-console__section sc-error-banner">
+          {analysisError && (
+            <section className="sc-console__section sc-error-banner" role="alert">
               <span className="text-h4 font-display" style={{ color: 'var(--color-driver-critical)' }}>
                 <ShieldAlert size={16} style={{ display: 'inline', marginRight: 8 }} />
-                Analysis Pipeline Exception: {error}
+                Analysis Pipeline Exception: {analysisError}
               </span>
             </section>
           )}
@@ -556,9 +419,11 @@ export const Dashboard: React.FC = () => {
                 </span>
                 <span className="sc-chart-tag" style={{ color: 'var(--color-text-primary)' }}>
                   STRESS {formatCorrelation(stressCorrelation)}
+                  {stressCorrelation?.pearson_r === null ? ` · ${correlationReason(stressCorrelation)}` : ''}
                 </span>
                 <span className="sc-chart-tag" style={{ color: 'var(--color-text-primary)' }}>
                   FATIGUE {formatCorrelation(fatigueCorrelation)}
+                  {fatigueCorrelation?.pearson_r === null ? ` · ${correlationReason(fatigueCorrelation)}` : ''}
                 </span>
                 <span className="sc-chart-tag" style={{ color: 'var(--color-text-muted)' }}>
                   TREND {analysis?.fatigue_trend?.trend ?? '—'}
@@ -695,6 +560,7 @@ export const Dashboard: React.FC = () => {
           <section className="sc-console__section">
             <TranscriptTimeline
               segments={transcriptSegments}
+              states={analysis?.driver_states ?? []}
               currentTime={currentTime}
               onSegmentClick={(time) => setSeekTrigger({ time })}
             />
@@ -704,11 +570,11 @@ export const Dashboard: React.FC = () => {
         <div className="sc-console__col-side">
           <section className="sc-console__section" id="driver-state">
             <DriverStateCard
-              overallStress={analysis && analysis.driver_states.length > 0 ? analysis.overall_stress : null}
-              overallFatigue={analysis && analysis.driver_states.length > 0 ? analysis.overall_fatigue : null}
+              stressScore={driverStateView.stressScore}
+              fatigueScore={driverStateView.fatigueScore}
+              calmScore={driverStateView.calmScore}
               dominantEmotion={dominantEmotion}
-              probabilities={averageProbs}
-              confidence={avgConfidence}
+              confidence={driverStateView.confidence}
               processingTime={analysis?.processing_time_ms}
             />
           </section>

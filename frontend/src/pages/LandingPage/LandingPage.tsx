@@ -93,7 +93,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterConsole }) => {
                 AI RACE ENGINEERING INTELLIGENCE
               </span>
               <span className="sc-hero-meta font-telemetry text-micro">
-                BAHRAIN GP · PRACTICE 2
+                ILLUSTRATIVE SESSION · BAHRAIN GP · PRACTICE 2
               </span>
             </motion.div>
 
