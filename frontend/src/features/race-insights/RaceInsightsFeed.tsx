@@ -17,8 +17,8 @@ export const RaceInsightsFeed: React.FC<RaceInsightsFeedProps> = ({ insights }) 
       <div className="sc-insights-card">
         <EmptyState
           icon={<Sparkles size={32} />}
-          title="No AI Race Insights Generated"
-          description="Drop driver radio audio session or lap timing data to activate automated race engineering observations."
+          title="No evidence-based insights yet"
+          description="Insights will appear after analysis has both real driver audio and lap telemetry to compare."
         />
       </div>
     );
@@ -50,9 +50,7 @@ export const RaceInsightsFeed: React.FC<RaceInsightsFeedProps> = ({ insights }) 
           <ShieldCheck size={14} />
           <span>EVIDENCE-BASED RECOMMENDATIONS</span>
         </div>
-        <span className="text-micro font-telemetry text-lime">
-          CONFIDENCE 94%
-        </span>
+        <span className="text-micro font-telemetry text-lime">SORTED BY SEVERITY</span>
       </div>
 
       <div className="sc-insights-feed__list">
@@ -67,6 +65,10 @@ export const RaceInsightsFeed: React.FC<RaceInsightsFeedProps> = ({ insights }) 
               ? 'Instruct driver to adjust entry line into Turn 7 & review pit window.'
               : undefined
           );
+          const evidence = Object.entries(insight.evidence ?? {})
+            .slice(0, 3)
+            .map(([key, value]) => `${key}: ${typeof value === 'number' ? value.toFixed(3) : String(value)}`)
+            .join(' · ');
 
           return (
             <motion.div
@@ -79,10 +81,15 @@ export const RaceInsightsFeed: React.FC<RaceInsightsFeedProps> = ({ insights }) 
                 severity={sev}
                 title={insight.category}
                 category={insight.category}
-                lapNumber={insight.lap_number || undefined}
+                lapNumber={insight.lap_number ?? undefined}
                 message={insight.message}
                 recommendation={rec}
               />
+              {evidence && (
+                <div className="sc-insights-feed__evidence font-telemetry text-micro">
+                  Evidence: {evidence}
+                </div>
+              )}
             </motion.div>
           );
         })}

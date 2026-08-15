@@ -6,15 +6,15 @@ import wave
 
 import numpy as np
 import pytest
-from backend.app.audio.preprocessing import (
+from app.audio.preprocessing import (
     compute_rms_energy,
     extract_audio_segments,
     preprocess_audio,
     save_processed_audio,
     save_upload,
 )
-from backend.app.audio.validation import AudioValidationError
-from backend.app.core.config import settings
+from app.audio.validation import AudioValidationError
+from app.core.config import settings
 
 
 def test_preprocessing_preserves_raw_intensity_and_normalizes_model_copy(wav_bytes_factory):

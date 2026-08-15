@@ -5,9 +5,9 @@ from dataclasses import replace
 
 import numpy as np
 import pytest
-from backend.app.audio.features import analyze_acoustics, extract_acoustic_features
-from backend.app.audio.preprocessing import preprocess_audio
-from backend.app.schemas.schemas import TranscriptSegment
+from app.audio.features import analyze_acoustics, extract_acoustic_features
+from app.audio.preprocessing import preprocess_audio
+from app.schemas.schemas import TranscriptSegment
 
 
 def _sine(frequency: float, duration: float = 1.0, sample_rate: int = 16_000, amplitude=0.2):

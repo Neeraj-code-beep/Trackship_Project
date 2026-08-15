@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from backend.app.schemas.schemas import (
+from app.schemas.schemas import (
     AlignedLapEmotion,
     CorrelationResult,
     FatigueTrend,

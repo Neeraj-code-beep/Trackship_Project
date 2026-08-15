@@ -60,3 +60,10 @@
   overflow-y: auto;
   padding-right: var(--space-4);
 }
+
+.sc-insights-feed__evidence {
+  margin: -6px 0 0 var(--space-8);
+  padding: 0 var(--space-12) var(--space-8) var(--space-12);
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}

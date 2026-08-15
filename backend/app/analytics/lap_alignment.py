@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import math
 
-from backend.app.analytics.lap_performance import compute_lap_baseline, lap_delta
-from backend.app.schemas.schemas import (
+from app.analytics.lap_performance import compute_lap_baseline, lap_delta
+from app.schemas.schemas import (
     AlignedLapEmotion,
     DriverState,
     EmotionLabel,
     LapData,
     TranscriptSegment,
 )
-from backend.app.services.lap_service import normalize_laps
+from app.services.lap_service import normalize_laps
 
 BOUNDARY_TOLERANCE_SECONDS = 1e-9
 

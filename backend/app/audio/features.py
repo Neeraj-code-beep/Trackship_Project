@@ -6,8 +6,8 @@ import math
 import re
 
 import numpy as np
-from backend.app.audio.preprocessing import PreprocessedAudio
-from backend.app.schemas.schemas import (
+from app.audio.preprocessing import PreprocessedAudio
+from app.schemas.schemas import (
     AcousticAnalysis,
     AcousticFeatures,
     SegmentAcousticFeatures,

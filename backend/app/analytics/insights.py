@@ -5,12 +5,12 @@ from __future__ import annotations
 from statistics import median
 from typing import Any
 
-from backend.app.analytics.correlation import (
+from app.analytics.correlation import (
     compute_fatigue_pace_correlation,
     compute_stint_fatigue_trend,
     compute_stress_pace_correlation,
 )
-from backend.app.schemas.schemas import (
+from app.schemas.schemas import (
     AlignedLapEmotion,
     EmotionLabel,
     InsightItem,

@@ -57,8 +57,8 @@ export const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({
       <div className="sc-transcript-card">
         <EmptyState
           icon={<MessageSquare size={32} />}
-          title="No Radio Transcript Sessions Ingested"
-          description="Drop driver radio audio session above to extract real-time speech segments and AI emotion alignment."
+          title="Transcript will appear after analysis"
+          description="No transcript is available yet. Upload real audio and start analysis to reveal speech segments."
         />
       </div>
     );
@@ -126,7 +126,9 @@ export const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({
 
                   <span className="sc-transcript-item__conf font-telemetry text-micro">
                     <ShieldCheck size={11} />
-                    {((seg.confidence ?? 1.0) * 100).toFixed(0)}% ASR
+                    {seg.confidence !== null && seg.confidence !== undefined
+                      ? `${(seg.confidence * 100).toFixed(0)}% ASR`
+                      : 'ASR N/A'}
                   </span>
 
                   {isStressFlagged && (

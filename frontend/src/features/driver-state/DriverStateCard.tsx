@@ -11,6 +11,7 @@ interface DriverStateCardProps {
   overallFatigue: number | null;
   dominantEmotion?: EmotionLabel;
   probabilities?: EmotionProbabilities;
+  confidence?: number | null;
   processingTime?: number;
 }
 
@@ -46,6 +47,7 @@ export const DriverStateCard: React.FC<DriverStateCardProps> = ({
   overallFatigue,
   dominantEmotion = 'neutral',
   probabilities,
+  confidence,
   processingTime,
 }) => {
   if (overallStress === null || overallFatigue === null || !probabilities) {
@@ -64,8 +66,8 @@ export const DriverStateCard: React.FC<DriverStateCardProps> = ({
         </div>
         <EmptyState
           icon={<Activity size={32} />}
-          title="Awaiting Driver Telemetry"
-          description="Driver stress and fatigue levels will be analyzed and plotted here upon audio session ingestion."
+          title="Awaiting analysis"
+          description="Driver stress and fatigue will appear here after real audio and race telemetry are analyzed."
         />
       </div>
     );
@@ -77,9 +79,8 @@ export const DriverStateCard: React.FC<DriverStateCardProps> = ({
   const stressVal = (probabilities?.stressed ?? overallStress) * 100;
   const neutralVal = (probabilities?.neutral ?? 0) * 100;
   const fatigueVal = (probabilities?.tired ?? overallFatigue) * 100;
-
-  // Max probability
-  const dominantPct = Math.max(calmVal, stressVal, neutralVal, fatigueVal);
+  const confidencePct = confidence !== undefined && confidence !== null ? confidence * 100 : null;
+  const confidenceLabel = confidencePct !== null ? `${confidencePct.toFixed(0)}%` : '--';
 
   return (
     <div className="sc-driver-card">
@@ -121,10 +122,10 @@ export const DriverStateCard: React.FC<DriverStateCardProps> = ({
         <div className="sc-driver-card__dominant-right">
           <div className="sc-driver-card__pct-box">
             <span className="sc-driver-card__pct-val font-telemetry" style={{ color: config.color }}>
-              {dominantPct.toFixed(0)}%
+              {confidenceLabel}
             </span>
             <span className="text-micro font-telemetry" style={{ color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 2 }}>
-              <ShieldCheck size={10} /> CONFIDENCE
+              <ShieldCheck size={10} /> {confidencePct !== null ? 'MODEL CONFIDENCE' : 'TOP SIGNAL'}
             </span>
           </div>
         </div>

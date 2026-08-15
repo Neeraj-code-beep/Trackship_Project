@@ -1,8 +1,9 @@
 """Application configuration loaded from environment variables."""
 
+import json
 from pathlib import Path
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,7 +37,28 @@ class Settings(BaseSettings):
         env_file=BASE_DIR / ".env",
         case_sensitive=True,
         extra="ignore",
+        enable_decoding=False,
     )
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value):
+        """Accept JSON lists or comma-separated strings from environment variables."""
+        if value is None:
+            return value
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            candidate = value.strip()
+            if not candidate:
+                return []
+            if candidate.startswith("["):
+                parsed = json.loads(candidate)
+                if isinstance(parsed, list):
+                    return parsed
+                raise ValueError("CORS_ORIGINS JSON must decode to a list")
+            return [item.strip() for item in candidate.split(",") if item.strip()]
+        return value
 
     @property
     def max_upload_size_bytes(self) -> int:

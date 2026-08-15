@@ -71,6 +71,29 @@ export async function ingestLaps(
   return response.data;
 }
 
+export async function uploadLapTelemetryCsv(
+  request: {
+    raceId: string;
+    driverName: string;
+    file: File;
+  }
+): Promise<LapIngestionResponse> {
+  const formData = new FormData();
+  formData.append('race_id', request.raceId);
+  formData.append('driver_name', request.driverName);
+  formData.append('file', request.file);
+
+  const response = await apiClient.post<LapIngestionResponse>(
+    ENDPOINTS.RACE_LAPS_CSV,
+    formData,
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }
+  );
+
+  return response.data;
+}
+
 export async function getRace(raceId: string): Promise<RaceOverview> {
   const response = await apiClient.get<RaceOverview>(
     ENDPOINTS.RACE_DETAIL(raceId)

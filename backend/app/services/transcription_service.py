@@ -8,10 +8,10 @@ import math
 from pathlib import Path
 from typing import Any
 
-from backend.app.audio.preprocessing import PreprocessedAudio, preprocess_audio
-from backend.app.core.config import settings
-from backend.app.schemas.schemas import TranscriptionResult, TranscriptSegment
-from backend.app.services.model_registry import ModelUnavailableError, registry
+from app.audio.preprocessing import PreprocessedAudio, preprocess_audio
+from app.core.config import settings
+from app.schemas.schemas import TranscriptionResult, TranscriptSegment
+from app.services.model_registry import ModelUnavailableError, registry
 
 logger = logging.getLogger(__name__)
 

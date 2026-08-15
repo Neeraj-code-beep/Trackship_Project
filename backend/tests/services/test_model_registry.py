@@ -4,8 +4,8 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
-from backend.app.core.config import Settings, settings
-from backend.app.services.model_registry import ModelRegistry, ModelUnavailableError
+from app.core.config import Settings, settings
+from app.services.model_registry import ModelRegistry, ModelUnavailableError
 
 
 def test_model_is_lazy_loaded_and_reused(monkeypatch):

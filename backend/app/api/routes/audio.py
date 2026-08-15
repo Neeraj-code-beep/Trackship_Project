@@ -8,9 +8,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated
 
-from backend.app.audio.preprocessing import save_upload
-from backend.app.audio.validation import validate_upload
-from backend.app.schemas.schemas import AudioUploadResponse, ErrorResponse
+from app.audio.preprocessing import save_upload
+from app.audio.validation import validate_upload
+from app.schemas.schemas import AudioUploadResponse, ErrorResponse
 from fastapi import APIRouter, File, UploadFile
 
 router = APIRouter(prefix="/audio", tags=["Audio"])

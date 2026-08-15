@@ -13,6 +13,7 @@ const MAX_SIZE_MB = 50;
 
 interface AudioUploadProps {
   onUploadComplete: (response: AudioUploadResponse) => void;
+  initialUpload?: AudioUploadResponse | null;
   isPlaying: boolean;
   setIsPlaying: (playing: boolean) => void;
   currentTime: number;
@@ -21,6 +22,7 @@ interface AudioUploadProps {
   setDuration: (duration: number) => void;
   seekTrigger: { time: number } | null;
   onFileSelect: (file: File | null) => void;
+  onReset?: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -32,6 +34,7 @@ function formatTime(seconds: number): string {
 
 export const AudioUpload: React.FC<AudioUploadProps> = ({
   onUploadComplete,
+  initialUpload = null,
   isPlaying,
   setIsPlaying,
   currentTime,
@@ -40,6 +43,7 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
   setDuration,
   seekTrigger,
   onFileSelect,
+  onReset,
 }) => {
   const [dragActive, setDragActive] = useState(false);
   const [progress, setProgress] = useState<UploadProgress>({
@@ -52,6 +56,22 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const audioHtmlRef = useRef<HTMLAudioElement | null>(null);
   const [audioUrl, setAudioUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (initialUpload) {
+      setUploadedFile(initialUpload);
+      setProgress({
+        status: 'complete',
+        progress: 100,
+        message: `✓ Session Restored: ${initialUpload.filename}`,
+      });
+      return;
+    }
+
+    setUploadedFile(null);
+    setAudioUrl('');
+    setProgress({ status: 'idle', progress: 0, message: 'Drop driver radio audio session or click to select file' });
+  }, [initialUpload]);
 
   const validateFile = (file: File): string | null => {
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -178,7 +198,10 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
     setCurrentTime(0);
     setDuration(0);
     if (inputRef.current) inputRef.current.value = '';
+    onReset?.();
   };
+
+  const playbackAvailable = Boolean(audioUrl);
 
   return (
     <div className="sc-radio-uploader">
@@ -281,33 +304,43 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({
                 <button
                   className="sc-radio-player__play-btn"
                   onClick={() => setIsPlaying(!isPlaying)}
+                  disabled={!playbackAvailable}
                   aria-label={isPlaying ? 'Pause radio' : 'Play radio'}
                 >
                   {isPlaying ? <Pause size={18} /> : <Play size={18} style={{ marginLeft: 2 }} />}
                 </button>
 
                 <div className="sc-radio-player__info">
-                  <div className="sc-radio-player__meta">
-                    <span className="sc-radio-player__filename font-telemetry">{uploadedFile.filename}</span>
-                    <span className="sc-radio-player__badge"><ShieldCheck size={11} /> 94% CONFIDENCE</span>
-                  </div>
+                <div className="sc-radio-player__meta">
+                  <span className="sc-radio-player__filename font-telemetry">{uploadedFile.filename}</span>
+                  <span className="sc-radio-player__badge">
+                    <ShieldCheck size={11} />
+                    {uploadedFile.file_id.slice(0, 8).toUpperCase()} · VERIFIED
+                  </span>
+                </div>
 
-                  <div className="sc-radio-player__scrubber">
-                    <div
-                      className="sc-radio-player__timeline"
-                      onClick={handleScrub}
-                      style={{ cursor: 'pointer' }}
-                    >
+                  {playbackAvailable ? (
+                    <div className="sc-radio-player__scrubber">
                       <div
-                        className="sc-radio-player__progress"
-                        style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-                      />
+                        className="sc-radio-player__timeline"
+                        onClick={handleScrub}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <div
+                          className="sc-radio-player__progress"
+                          style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                        />
+                      </div>
+                      <div className="sc-radio-player__times font-telemetry">
+                        <span>{formatTime(currentTime)}</span>
+                        <span>{formatTime(duration || uploadedFile.duration_seconds || 0)}</span>
+                      </div>
                     </div>
-                    <div className="sc-radio-player__times font-telemetry">
-                      <span>{formatTime(currentTime)}</span>
-                      <span>{formatTime(duration || uploadedFile.duration_seconds || 0)}</span>
+                  ) : (
+                    <div className="sc-radio-player__scrubber text-caption">
+                      Playback controls are unavailable until the audio file is re-uploaded in this browser session.
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 

@@ -15,6 +15,7 @@ export const ENDPOINTS = {
 
   // Race
   RACE_LAPS: `${API_V1}/race/laps`,
+  RACE_LAPS_CSV: `${API_V1}/race/laps/csv`,
   RACE_DETAIL: (raceId: string) => `${API_V1}/race/${raceId}`,
 
   // System

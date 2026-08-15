@@ -54,7 +54,9 @@ export const Alert: React.FC<AlertProps> = ({
         <div className="sc-alert__header">
           <div className="sc-alert__meta">
             {category && <span className="sc-alert__category text-micro">{category}</span>}
-            {lapNumber && <span className="sc-alert__lap text-micro">Lap {lapNumber}</span>}
+            {lapNumber !== undefined && lapNumber !== null && (
+              <span className="sc-alert__lap text-micro">Lap {lapNumber}</span>
+            )}
             <span className="sc-alert__severity text-micro">{cfg.label}</span>
           </div>
           <h4 className="sc-alert__title text-h3">{title}</h4>

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from backend.app.api.routes import _stores
-from backend.app.schemas.schemas import AnalysisRequest, AnalysisResponse, ErrorResponse
-from backend.app.services.analysis_service import run_full_analysis
+from app.api.routes import _stores
+from app.schemas.schemas import AnalysisRequest, AnalysisResponse, ErrorResponse
+from app.services.analysis_service import run_full_analysis
 from fastapi import APIRouter
 
 router = APIRouter(prefix="/analysis", tags=["Analysis"])

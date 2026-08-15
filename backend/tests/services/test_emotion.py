@@ -3,13 +3,13 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from backend.app.schemas.schemas import EmotionLabel, TranscriptSegment
-from backend.app.services.emotion_service import (
+from app.schemas.schemas import EmotionLabel, TranscriptSegment
+from app.services.emotion_service import (
     EmotionAnalysisError,
     analyze_emotions,
     map_raw_emotions,
 )
-from backend.app.services.model_registry import ModelUnavailableError, registry
+from app.services.model_registry import ModelUnavailableError, registry
 
 
 class FakeEmotionModel:

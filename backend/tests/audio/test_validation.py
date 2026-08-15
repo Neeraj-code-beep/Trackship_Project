@@ -5,12 +5,12 @@ import io
 from pathlib import Path
 
 import pytest
-from backend.app.audio.validation import (
+from app.audio.validation import (
     AudioValidationError,
     validate_extension,
     validate_upload,
 )
-from backend.app.core.config import settings
+from app.core.config import settings
 from fastapi import UploadFile
 
 
